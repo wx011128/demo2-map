@@ -23,6 +23,113 @@
     .loading{display:none;color:#007AFF}
     .error{display:none;color:#FF3B30}
     .success{display:none;color:#34C759}
+    
+    /* 导航面板样式 */
+    .navigation-panel {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      z-index: 1000;
+    }
+    
+    .nav-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .nav-header h3 {
+      margin: 0;
+      color: #333;
+      font-size: 18px;
+    }
+    
+    .stop-btn {
+      background: #FF3B30;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 15px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    
+    .current-step {
+      margin-bottom: 15px;
+    }
+    
+    .step-instruction {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 5px;
+      line-height: 1.4;
+    }
+    
+    .step-distance {
+      font-size: 14px;
+      color: #666;
+    }
+    
+    .nav-progress {
+      margin-bottom: 15px;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: #E5E5EA;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: #007AFF;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    
+    .progress-text {
+      text-align: center;
+      font-size: 12px;
+      color: #666;
+    }
+    
+    .nav-controls {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .nav-btn {
+      flex: 1;
+      background: #F2F2F7;
+      border: 1px solid #D1D1D6;
+      padding: 10px;
+      border-radius: 12px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .nav-btn:hover {
+      background: #E5E5EA;
+    }
+    
+    .nav-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   </style>
   <!-- 加载 Google Maps JS + Places 库 -->
   <script async
@@ -36,9 +143,7 @@
     <div class="card grow">
       <div class="row">
         <input id="search" placeholder="目的地を入力（日・中・英対応）" />
-        <span id="mode-walk" class="pill active" data-mode="WALKING">徒歩</span>
-        <span id="mode-drive" class="pill" data-mode="DRIVING">車</span>
-        <button id="go">開始</button>
+        <button id="go">ナビ開始</button>
         <span id="dist"></span>
       </div>
     </div>
@@ -50,11 +155,38 @@
     <div class="success" id="success">ルートが設定されました</div>
   </div>
 
+  <!-- 导航指引面板 -->
+  <div class="navigation-panel" id="navigationPanel" style="display: none;">
+    <div class="nav-header">
+      <h3>ナビゲーション</h3>
+      <button id="stopNav" class="stop-btn">停止</button>
+    </div>
+    <div class="nav-content">
+      <div class="current-step" id="currentStep">
+        <div class="step-instruction" id="stepInstruction">ナビゲーションを開始してください</div>
+        <div class="step-distance" id="stepDistance"></div>
+      </div>
+      <div class="nav-progress">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">0 / 0 ステップ</div>
+      </div>
+      <div class="nav-controls">
+        <button id="prevStep" class="nav-btn">← 前</button>
+        <button id="nextStep" class="nav-btn">次 →</button>
+      </div>
+    </div>
+  </div>
+
 <script>
   let map, directionsService, directionsRenderer, autocomplete;
   let origin = null;      // [lng, lat]
   let dest = null;        // [lng, lat]
   let travelMode = 'WALKING';
+  let currentRoute = null;
+  let currentStepIndex = 0;
+  let navigationActive = false;
 
   // 从 URL 获取起点（由小程序拼接），缺省京都站
   function getQueryFloat(name, def){ 
@@ -101,19 +233,25 @@
       }
     });
 
-    // 起点标记
+    // 起点标记 - 更明显的当前位置
     new google.maps.Marker({ 
       position: origin, 
       map, 
-      label: 'S',
+      label: {
+        text: '現在地',
+        color: '#fff',
+        fontSize: '12px',
+        fontWeight: 'bold'
+      },
       icon: {
         path: google.maps.SymbolPath.CIRCLE,
-        scale: 8,
+        scale: 12,
         fillColor: '#007AFF',
         fillOpacity: 1,
         strokeColor: '#fff',
-        strokeWeight: 2
-      }
+        strokeWeight: 3
+      },
+      title: '現在地'
     });
 
     // 自动补全
@@ -158,21 +296,10 @@
       showStatus('success');
     });
 
-    // 模式切换
-    const modeWalk = document.getElementById('mode-walk');
-    const modeDrive = document.getElementById('mode-drive');
-    [modeWalk, modeDrive].forEach(el => {
-      el.onclick = () => {
-        travelMode = el.dataset.mode;
-        modeWalk.classList.toggle('active', travelMode === 'WALKING');
-        modeDrive.classList.toggle('active', travelMode === 'DRIVING');
-        
-        // 如果已有路线，重新计算
-        if (origin && dest) {
-          routeAndReport();
-        }
-      };
-    });
+    // 导航控制按钮
+    document.getElementById('stopNav').onclick = stopNavigation;
+    document.getElementById('prevStep').onclick = () => changeStep(-1);
+    document.getElementById('nextStep').onclick = () => changeStep(1);
 
     // 开始导航（计算路线）
     document.getElementById('go').onclick = routeAndReport;
@@ -244,8 +371,8 @@
     directionsService.route({
       origin, 
       destination: dest, 
-      travelMode,
-      avoidHighways: travelMode === 'WALKING',
+      travelMode: 'WALKING',
+      avoidHighways: true,
       avoidTolls: true
     }, (res, status) => {
       document.getElementById('go').disabled = false;
@@ -264,6 +391,11 @@
         `距離 ${meters < 1000 ? Math.round(meters) + 'm' : (meters/1000).toFixed(2) + 'km'}・約 ${Math.round(seconds/60)} 分`;
 
       showStatus('success');
+      
+      // 保存路线并开始导航
+      currentRoute = res.routes[0];
+      currentStepIndex = 0;
+      startNavigation();
 
       // 回传小程序
       if (window.parent && window.parent.postMessage) {
@@ -272,7 +404,7 @@
           payload: {
             distanceMeters: meters,
             durationSeconds: seconds,
-            mode: travelMode,
+            mode: 'WALKING',
             origin: origin,
             destination: dest,
             route: res.routes[0]
@@ -280,6 +412,67 @@
         }, '*');
       }
     });
+  }
+  
+  // 开始导航
+  function startNavigation() {
+    if (!currentRoute) return;
+    
+    navigationActive = true;
+    document.getElementById('navigationPanel').style.display = 'block';
+    updateNavigationDisplay();
+  }
+  
+  // 停止导航
+  function stopNavigation() {
+    navigationActive = false;
+    document.getElementById('navigationPanel').style.display = 'none';
+    currentRoute = null;
+    currentStepIndex = 0;
+  }
+  
+  // 更新导航显示
+  function updateNavigationDisplay() {
+    if (!currentRoute || !navigationActive) return;
+    
+    const steps = currentRoute.legs[0].steps;
+    const totalSteps = steps.length;
+    
+    if (currentStepIndex >= totalSteps) {
+      document.getElementById('stepInstruction').textContent = '目的地に到着しました！';
+      document.getElementById('stepDistance').textContent = '';
+      document.getElementById('progressFill').style.width = '100%';
+      document.getElementById('progressText').textContent = `${totalSteps} / ${totalSteps} ステップ`;
+      return;
+    }
+    
+    const currentStep = steps[currentStepIndex];
+    const instruction = currentStep.instructions.replace(/<[^>]*>/g, ''); // 移除HTML标签
+    const distance = currentStep.distance ? currentStep.distance.text : '';
+    
+    document.getElementById('stepInstruction').textContent = instruction;
+    document.getElementById('stepDistance').textContent = distance;
+    
+    const progress = ((currentStepIndex + 1) / totalSteps) * 100;
+    document.getElementById('progressFill').style.width = progress + '%';
+    document.getElementById('progressText').textContent = `${currentStepIndex + 1} / ${totalSteps} ステップ`;
+    
+    // 更新按钮状态
+    document.getElementById('prevStep').disabled = currentStepIndex === 0;
+    document.getElementById('nextStep').disabled = currentStepIndex >= totalSteps - 1;
+  }
+  
+  // 切换步骤
+  function changeStep(direction) {
+    if (!currentRoute || !navigationActive) return;
+    
+    const totalSteps = currentRoute.legs[0].steps.length;
+    const newIndex = currentStepIndex + direction;
+    
+    if (newIndex >= 0 && newIndex < totalSteps) {
+      currentStepIndex = newIndex;
+      updateNavigationDisplay();
+    }
   }
 
   // 全局回调（由 script 的 callback=init 触发）
