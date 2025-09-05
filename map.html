@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>ナビゲーション</title>
+  <style>
+    html,body,#map{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+    .panel{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px;z-index:10}
+    .card{background:rgba(255,255,255,0.95);padding:12px 16px;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.15);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.2)}
+    .grow{flex:1}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .pill{padding:8px 12px;border-radius:20px;border:1px solid #ddd;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.2s ease;background:#fff}
+    .pill.active{background:#007AFF;color:#fff;border-color:#007AFF;transform:scale(1.05)}
+    .pill:hover{transform:scale(1.02)}
+    #search{padding:8px 12px;border:1px solid #ddd;border-radius:20px;font-size:16px;outline:none;flex:1;min-width:200px}
+    #search:focus{border-color:#007AFF;box-shadow:0 0 0 3px rgba(0,122,255,0.1)}
+    #go{padding:8px 16px;background:#007AFF;color:#fff;border:none;border-radius:20px;cursor:pointer;font-weight:600;transition:all 0.2s ease}
+    #go:hover{background:#0056CC;transform:scale(1.05)}
+    #go:disabled{background:#ccc;cursor:not-allowed;transform:none}
+    #dist{margin-left:8px;color:#111;font-weight:600;font-size:14px;white-space:nowrap}
+    .status{position:absolute;bottom:20px;left:20px;right:20px;background:rgba(0,0,0,0.8);color:#fff;padding:12px 16px;border-radius:12px;font-size:14px;text-align:center;z-index:10}
+    .loading{display:none;color:#007AFF}
+    .error{display:none;color:#FF3B30}
+    .success{display:none;color:#34C759}
+  </style>
+  <!-- 加载 Google Maps JS + Places 库 -->
+  <script async
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAhspEDXoZ63pYFyYaR2IpmwEDApsxsbU4&libraries=places&language=ja&region=JP&callback=init">
+  </script>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="panel">
+    <div class="card grow">
+      <div class="row">
+        <input id="search" placeholder="目的地を入力（日・中・英対応）" />
+        <span id="mode-walk" class="pill active" data-mode="WALKING">徒歩</span>
+        <span id="mode-drive" class="pill" data-mode="DRIVING">車</span>
+        <button id="go">開始</button>
+        <span id="dist"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="status">
+    <div class="loading" id="loading">ルート計算中...</div>
+    <div class="error" id="error">ルート取得に失敗しました</div>
+    <div class="success" id="success">ルートが設定されました</div>
+  </div>
+
+<script>
+  let map, directionsService, directionsRenderer, autocomplete;
+  let origin = null;      // [lng, lat]
+  let dest = null;        // [lng, lat]
+  let travelMode = 'WALKING';
+
+  // 从 URL 获取起点（由小程序拼接），缺省京都站
+  function getQueryFloat(name, def){ 
+    const v = new URLSearchParams(location.search).get(name); 
+    return v ? parseFloat(v) : def; 
+  }
+
+  function showStatus(type) {
+    document.querySelectorAll('.status > div').forEach(el => el.style.display = 'none');
+    document.getElementById(type).style.display = 'block';
+    if (type !== 'loading') {
+      setTimeout(() => {
+        document.getElementById(type).style.display = 'none';
+      }, 3000);
+    }
+  }
+
+  function init(){
+    const olng = getQueryFloat('olng', 135.759644); // 京都站
+    const olat = getQueryFloat('olat', 35.003118);
+    origin = {lng: olng, lat: olat};
+
+    map = new google.maps.Map(document.getElementById('map'), {
+      center: origin, 
+      zoom: 15, 
+      disableDefaultUI: false,
+      styles: [
+        {
+          featureType: "poi",
+          elementType: "labels",
+          stylers: [{ visibility: "off" }]
+        }
+      ]
+    });
+
+    directionsService = new google.maps.DirectionsService();
+    directionsRenderer = new google.maps.DirectionsRenderer({ 
+      map,
+      suppressMarkers: false,
+      polylineOptions: {
+        strokeColor: '#007AFF',
+        strokeWeight: 4,
+        strokeOpacity: 0.8
+      }
+    });
+
+    // 起点标记
+    new google.maps.Marker({ 
+      position: origin, 
+      map, 
+      label: 'S',
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 8,
+        fillColor: '#007AFF',
+        fillOpacity: 1,
+        strokeColor: '#fff',
+        strokeWeight: 2
+      }
+    });
+
+    // 自动补全
+    const input = document.getElementById('search');
+    autocomplete = new google.maps.places.Autocomplete(input, {
+      fields: ['geometry','name','formatted_address'],
+      types: ['establishment', 'geocode']
+    });
+    
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (!place.geometry || !place.geometry.location) return;
+      
+      const ll = place.geometry.location;
+      dest = { lng: ll.lng(), lat: ll.lat() };
+      
+      // 清除之前的终点标记
+      const markers = map.markers || [];
+      markers.forEach(marker => {
+        if (marker.label === 'G') marker.setMap(null);
+      });
+      
+      // 添加新的终点标记
+      const destMarker = new google.maps.Marker({ 
+        position: dest, 
+        map, 
+        label: 'G',
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: '#FF3B30',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2
+        }
+      });
+      
+      if (!map.markers) map.markers = [];
+      map.markers.push(destMarker);
+      
+      map.panTo(dest);
+      showStatus('success');
+    });
+
+    // 模式切换
+    const modeWalk = document.getElementById('mode-walk');
+    const modeDrive = document.getElementById('mode-drive');
+    [modeWalk, modeDrive].forEach(el => {
+      el.onclick = () => {
+        travelMode = el.dataset.mode;
+        modeWalk.classList.toggle('active', travelMode === 'WALKING');
+        modeDrive.classList.toggle('active', travelMode === 'DRIVING');
+        
+        // 如果已有路线，重新计算
+        if (origin && dest) {
+          routeAndReport();
+        }
+      };
+    });
+
+    // 开始导航（计算路线）
+    document.getElementById('go').onclick = routeAndReport;
+
+    // 小程序 -> H5 的位置更新：接收 postMessage
+    window.addEventListener('message', e => {
+      const { type, payload } = e.data || {};
+      if (type === 'setOrigin' && payload) {
+        origin = { lng: payload.lng, lat: payload.lat };
+        map.setCenter(origin);
+        
+        // 更新起点标记
+        const markers = map.markers || [];
+        markers.forEach(marker => {
+          if (marker.label === 'S') marker.setMap(null);
+        });
+        
+        new google.maps.Marker({ 
+          position: origin, 
+          map, 
+          label: 'S',
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: '#007AFF',
+            fillOpacity: 1,
+            strokeColor: '#fff',
+            strokeWeight: 2
+          }
+        });
+      }
+      if (type === 'setDest' && payload) {
+        dest = { lng: payload.lng, lat: payload.lat };
+        
+        // 更新终点标记
+        const markers = map.markers || [];
+        markers.forEach(marker => {
+          if (marker.label === 'G') marker.setMap(null);
+        });
+        
+        new google.maps.Marker({ 
+          position: dest, 
+          map, 
+          label: 'G',
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: '#FF3B30',
+            fillOpacity: 1,
+            strokeColor: '#fff',
+            strokeWeight: 2
+          }
+        });
+        
+        routeAndReport();
+      }
+    });
+  }
+
+  async function routeAndReport(){
+    if (!origin || !dest) {
+      showStatus('error');
+      return alert('出発地/目的地を設定してください');
+    }
+    
+    showStatus('loading');
+    document.getElementById('go').disabled = true;
+    
+    directionsService.route({
+      origin, 
+      destination: dest, 
+      travelMode,
+      avoidHighways: travelMode === 'WALKING',
+      avoidTolls: true
+    }, (res, status) => {
+      document.getElementById('go').disabled = false;
+      
+      if (status !== 'OK') {
+        showStatus('error');
+        return alert('ルート取得に失敗しました: ' + status);
+      }
+      
+      directionsRenderer.setDirections(res);
+      const leg = res.routes[0].legs[0];
+      const meters = leg.distance.value;       // 米
+      const seconds = leg.duration.value;      // 秒
+      
+      document.getElementById('dist').textContent =
+        `距離 ${meters < 1000 ? Math.round(meters) + 'm' : (meters/1000).toFixed(2) + 'km'}・約 ${Math.round(seconds/60)} 分`;
+
+      showStatus('success');
+
+      // 回传小程序
+      if (window.parent && window.parent.postMessage) {
+        window.parent.postMessage({
+          type: 'routeUpdate',
+          payload: {
+            distanceMeters: meters,
+            durationSeconds: seconds,
+            mode: travelMode,
+            origin: origin,
+            destination: dest,
+            route: res.routes[0]
+          }
+        }, '*');
+      }
+    });
+  }
+
+  // 全局回调（由 script 的 callback=init 触发）
+  window.init = init;
+</script>
+</body>
+</html>
