@@ -59,70 +59,176 @@
       color: #333;
     }
     
-    /* 导航指引面板样式 */
-    .navigation-guide {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      right: 20px;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-radius: 20px;
-      padding: 20px;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      z-index: 200;
+    /* 全屏导航界面样式 */
+    .navigation-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
     }
     
-    .guide-header {
+    /* 顶部状态栏 */
+    .status-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 15px;
-    }
-    
-    .guide-header h3 {
-      margin: 0;
-      color: #333;
-      font-size: 18px;
+      padding: 8px 20px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      font-size: 14px;
       font-weight: 600;
     }
     
-    .stop-guide-btn {
+    .status-icons {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    
+    /* 导航指令横幅 */
+    .instruction-banner {
+      background: #4CAF50;
+      color: white;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .direction-icon {
+      font-size: 24px;
+      font-weight: bold;
+    }
+    
+    .instruction-text {
+      flex: 1;
+    }
+    
+    .current-street {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .next-action {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    
+    /* 地图容器 */
+    .map-container {
+      flex: 1;
+      position: relative;
+      background: #f0f0f0;
+    }
+    
+    #navMap {
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* 右侧进度条 */
+    .progress-sidebar {
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .progress-circle-container {
+      position: relative;
+    }
+    
+    .progress-circle {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: conic-gradient(#007AFF 0deg, #E5E5EA 0deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    
+    .progress-circle::before {
+      content: '';
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: white;
+    }
+    
+    .progress-circle .progress-text {
+      position: relative;
+      z-index: 1;
+      font-size: 12px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .progress-label {
+      font-size: 12px;
+      color: white;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 4px 8px;
+      border-radius: 12px;
+    }
+    
+    /* 底部信息面板 */
+    .bottom-panel {
+      background: white;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #E5E5EA;
+    }
+    
+    .time-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .remaining-time {
+      font-size: 24px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .walking-icon {
+      font-size: 20px;
+    }
+    
+    .distance-info {
+      font-size: 14px;
+      color: #666;
+    }
+    
+    /* 退出按钮 */
+    .exit-btn {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
       background: #FF3B30;
       color: white;
       border: none;
-      padding: 8px 16px;
-      border-radius: 16px;
+      padding: 12px 20px;
+      border-radius: 20px;
       font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    
-    .stop-guide-btn:hover {
-      background: #D70015;
-      transform: scale(1.05);
-    }
-    
-    .guide-content {
-      text-align: center;
-    }
-    
-    .current-instruction {
-      font-size: 16px;
       font-weight: 600;
-      color: #333;
-      margin-bottom: 8px;
-      line-height: 1.4;
-      min-height: 22px;
-    }
-    
-    .instruction-distance {
-      font-size: 14px;
-      color: #666;
-      font-weight: 500;
+      cursor: pointer;
+      z-index: 1001;
     }
   </style>
   <!-- 加载 Google Maps JS + Places 库 -->
@@ -151,26 +257,60 @@
     <div class="progress-text" id="progressText">0%</div>
   </div>
 
-  <!-- 导航指引面板 -->
-  <div class="navigation-guide" id="navigationGuide" style="display: none;">
-    <div class="guide-header">
-      <h3>ナビゲーション</h3>
-      <button id="stopGuide" class="stop-guide-btn">停止</button>
-    </div>
-    <div class="guide-content">
-      <div class="current-instruction" id="currentInstruction">
-        ナビゲーションを開始してください
-      </div>
-      <div class="instruction-distance" id="instructionDistance">
-        目的地まで 0m
+  <!-- 全屏导航界面 -->
+  <div class="navigation-screen" id="navigationScreen" style="display: none;">
+    <!-- 顶部状态栏 -->
+    <div class="status-bar">
+      <div class="time" id="currentTime">10:56</div>
+      <div class="status-icons">
+        <div class="signal-icon">📶</div>
+        <div class="wifi-icon">📶</div>
+        <div class="battery">48%</div>
       </div>
     </div>
+    
+    <!-- 导航指令横幅 -->
+    <div class="instruction-banner">
+      <div class="direction-icon">↑</div>
+      <div class="instruction-text">
+        <div class="current-street" id="currentStreet">市場筋</div>
+        <div class="next-action" id="nextAction">蔵前通に向かう</div>
+      </div>
+    </div>
+    
+    <!-- 地图区域 -->
+    <div class="map-container">
+      <div id="navMap"></div>
+    </div>
+    
+    <!-- 右侧进度条 -->
+    <div class="progress-sidebar">
+      <div class="progress-circle-container">
+        <div class="progress-circle" id="progressCircle">
+          <div class="progress-text" id="progressText">0%</div>
+        </div>
+      </div>
+      <div class="progress-label">進捗</div>
+    </div>
+    
+    <!-- 底部信息面板 -->
+    <div class="bottom-panel">
+      <div class="time-info">
+        <div class="remaining-time" id="remainingTime">6分</div>
+        <div class="walking-icon">🚶</div>
+      </div>
+      <div class="distance-info" id="distanceInfo">450m・11:02</div>
+    </div>
+    
+    <!-- 退出按钮 -->
+    <button class="exit-btn" id="exitNav">退出</button>
   </div>
 
 
 
 <script>
   let map, directionsService, directionsRenderer, autocomplete;
+  let navMap = null;      // 导航界面的地图
   let origin = null;      // [lng, lat]
   let dest = null;        // [lng, lat]
   let travelMode = 'WALKING';
@@ -281,8 +421,8 @@
     // 开始导航（计算路线）
     document.getElementById('go').onclick = routeAndReport;
     
-    // 停止导航指引
-    document.getElementById('stopGuide').onclick = stopNavigationGuide;
+    // 退出导航
+    document.getElementById('exitNav').onclick = exitNavigation;
 
     // 小程序 -> H5 的位置更新：接收 postMessage
     window.addEventListener('message', e => {
@@ -367,11 +507,10 @@
       document.getElementById('dist').textContent =
         `距離 ${meters < 1000 ? Math.round(meters) + 'm' : (meters/1000).toFixed(2) + 'km'}・約 ${Math.round(seconds/60)} 分`;
 
-      // 保存路线并开始进度条和导航指引
+      // 保存路线并进入导航界面
       currentRoute = res.routes[0];
       currentStepIndex = 0;
-      startProgressTracking();
-      startNavigationGuide();
+      enterNavigationMode();
 
       // 回传小程序
       if (window.parent && window.parent.postMessage) {
@@ -420,10 +559,12 @@
   
   // 更新进度条
   function updateProgress(percentage) {
-    const progressFill = document.getElementById('progressFill');
+    const progressCircle = document.getElementById('progressCircle');
     const progressText = document.getElementById('progressText');
     
-    progressFill.style.width = percentage + '%';
+    // 更新圆形进度条
+    const angle = (percentage / 100) * 360;
+    progressCircle.style.background = `conic-gradient(#007AFF ${angle}deg, #E5E5EA ${angle}deg)`;
     progressText.textContent = Math.round(percentage) + '%';
   }
   
@@ -436,42 +577,86 @@
     document.getElementById('progressContainer').style.display = 'none';
   }
   
-  // 开始导航指引
-  function startNavigationGuide() {
+  // 进入导航模式
+  function enterNavigationMode() {
     if (!currentRoute) return;
     
-    // 显示导航指引面板
-    document.getElementById('navigationGuide').style.display = 'block';
+    // 隐藏主界面，显示导航界面
+    document.getElementById('map').style.display = 'none';
+    document.getElementById('navigationScreen').style.display = 'flex';
     
-    // 更新指引内容
-    updateNavigationGuide();
+    // 初始化导航地图
+    initNavigationMap();
     
-    // 定期更新指引（模拟位置变化）
+    // 更新导航信息
+    updateNavigationInfo();
+    
+    // 开始进度跟踪
+    startProgressTracking();
+    
+    // 定期更新导航信息
     guideInterval = setInterval(() => {
-      updateNavigationGuide();
+      updateNavigationInfo();
     }, 3000);
   }
   
-  // 停止导航指引
-  function stopNavigationGuide() {
+  // 退出导航模式
+  function exitNavigation() {
+    // 显示主界面，隐藏导航界面
+    document.getElementById('map').style.display = 'block';
+    document.getElementById('navigationScreen').style.display = 'none';
+    
+    // 停止所有定时器
     if (guideInterval) {
       clearInterval(guideInterval);
       guideInterval = null;
     }
-    document.getElementById('navigationGuide').style.display = 'none';
     stopProgressTracking();
   }
   
-  // 更新导航指引
-  function updateNavigationGuide() {
+  // 初始化导航地图
+  function initNavigationMap() {
+    if (navMap) return; // 已经初始化过了
+    
+    navMap = new google.maps.Map(document.getElementById('navMap'), {
+      center: origin,
+      zoom: 16,
+      disableDefaultUI: true,
+      styles: [
+        {
+          featureType: "poi",
+          elementType: "labels",
+          stylers: [{ visibility: "off" }]
+        }
+      ]
+    });
+    
+    // 添加路线到导航地图
+    const navDirectionsRenderer = new google.maps.DirectionsRenderer({
+      map: navMap,
+      suppressMarkers: false,
+      polylineOptions: {
+        strokeColor: '#007AFF',
+        strokeWeight: 4,
+        strokeOpacity: 0.8
+      }
+    });
+    
+    navDirectionsRenderer.setDirections({
+      routes: [currentRoute]
+    });
+  }
+  
+  // 更新导航信息
+  function updateNavigationInfo() {
     if (!currentRoute) return;
     
     const steps = currentRoute.legs[0].steps;
     const totalSteps = steps.length;
     
     if (currentStepIndex >= totalSteps) {
-      document.getElementById('currentInstruction').textContent = '目的地に到着しました！';
-      document.getElementById('instructionDistance').textContent = 'お疲れ様でした';
+      document.getElementById('currentStreet').textContent = '目的地到着';
+      document.getElementById('nextAction').textContent = 'お疲れ様でした';
       return;
     }
     
@@ -479,13 +664,32 @@
     const instruction = currentStep.instructions.replace(/<[^>]*>/g, ''); // 移除HTML标签
     const distance = currentStep.distance ? currentStep.distance.text : '';
     
-    document.getElementById('currentInstruction').textContent = instruction;
-    document.getElementById('instructionDistance').textContent = `次の指示まで ${distance}`;
+    // 解析指令，提取街道名和动作
+    const streetMatch = instruction.match(/(.+?)(?:に|で|を)/);
+    const actionMatch = instruction.match(/(?:に|で|を)(.+)/);
+    
+    document.getElementById('currentStreet').textContent = streetMatch ? streetMatch[1] : '現在地';
+    document.getElementById('nextAction').textContent = actionMatch ? actionMatch[1] : instruction;
+    
+    // 更新底部信息
+    const leg = currentRoute.legs[0];
+    const remainingDistance = leg.distance ? leg.distance.text : '0m';
+    const remainingTime = leg.duration ? leg.duration.text : '0分';
+    
+    document.getElementById('remainingTime').textContent = remainingTime;
+    document.getElementById('distanceInfo').textContent = `${remainingDistance}・${getArrivalTime()}`;
     
     // 模拟前进到下一步（实际应用中应该基于位置变化）
     if (Math.random() > 0.7) { // 30% 概率进入下一步
       currentStepIndex++;
     }
+  }
+  
+  // 获取到达时间
+  function getArrivalTime() {
+    const now = new Date();
+    const arrival = new Date(now.getTime() + 6 * 60 * 1000); // 模拟6分钟后到达
+    return arrival.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
   }
 
   // 全局回调（由 script 的 callback=init 触发）
