@@ -72,24 +72,6 @@
       flex-direction: column;
     }
     
-    /* 顶部状态栏 */
-    .status-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 20px;
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-      font-size: 14px;
-      font-weight: 600;
-    }
-    
-    .status-icons {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    
     /* 导航指令横幅 */
     .instruction-banner {
       background: #4CAF50;
@@ -98,6 +80,9 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      border-radius: 16px;
+      margin: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
     
     .direction-icon {
@@ -132,10 +117,10 @@
       height: 100%;
     }
     
-    /* 右侧进度条 */
+    /* 左侧纵向进度条 */
     .progress-sidebar {
       position: absolute;
-      right: 20px;
+      left: 20px;
       top: 50%;
       transform: translateY(-50%);
       display: flex;
@@ -144,36 +129,45 @@
       gap: 8px;
     }
     
-    .progress-circle-container {
-      position: relative;
-    }
-    
-    .progress-circle {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background: conic-gradient(#007AFF 0deg, #E5E5EA 0deg);
+    .progress-bar-container {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      position: relative;
+      gap: 8px;
     }
     
-    .progress-circle::before {
-      content: '';
+    .progress-bar-track {
+      width: 8px;
+      height: 200px;
+      background: #E5E5EA;
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .progress-bar-fill {
       position: absolute;
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background: white;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: #4CAF50;
+      border-radius: 4px;
+      transition: height 0.5s ease;
+      height: 0%;
     }
     
-    .progress-circle .progress-text {
-      position: relative;
-      z-index: 1;
-      font-size: 12px;
-      font-weight: 600;
-      color: #333;
+    .progress-indicator {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 16px;
+      height: 16px;
+      background: #4CAF50;
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      transition: top 0.5s ease;
+      top: 0%;
     }
     
     .progress-label {
@@ -187,39 +181,41 @@
     /* 底部信息面板 */
     .bottom-panel {
       background: white;
-      padding: 16px 20px;
+      padding: 20px;
+      margin: 20px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-top: 1px solid #E5E5EA;
     }
     
-    .time-info {
+    .info-content {
       display: flex;
-      align-items: center;
-      gap: 8px;
+      gap: 24px;
     }
     
-    .remaining-time {
-      font-size: 24px;
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .info-label {
+      font-size: 12px;
+      color: #666;
+      font-weight: 500;
+    }
+    
+    .info-value {
+      font-size: 18px;
       font-weight: 600;
       color: #333;
     }
     
-    .walking-icon {
-      font-size: 20px;
-    }
-    
-    .distance-info {
-      font-size: 14px;
-      color: #666;
-    }
-    
     /* 退出按钮 */
     .exit-btn {
-      position: absolute;
-      bottom: 20px;
-      right: 20px;
       background: #FF3B30;
       color: white;
       border: none;
@@ -228,7 +224,12 @@
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      z-index: 1001;
+      transition: all 0.2s ease;
+    }
+    
+    .exit-btn:hover {
+      background: #D70015;
+      transform: scale(1.05);
     }
   </style>
   <!-- 加载 Google Maps JS + Places 库 -->
@@ -259,16 +260,6 @@
 
   <!-- 全屏导航界面 -->
   <div class="navigation-screen" id="navigationScreen" style="display: none;">
-    <!-- 顶部状态栏 -->
-    <div class="status-bar">
-      <div class="time" id="currentTime">10:56</div>
-      <div class="status-icons">
-        <div class="signal-icon">📶</div>
-        <div class="wifi-icon">📶</div>
-        <div class="battery">48%</div>
-      </div>
-    </div>
-    
     <!-- 导航指令横幅 -->
     <div class="instruction-banner">
       <div class="direction-icon">↑</div>
@@ -283,27 +274,35 @@
       <div id="navMap"></div>
     </div>
     
-    <!-- 右侧进度条 -->
+    <!-- 左侧纵向进度条 -->
     <div class="progress-sidebar">
-      <div class="progress-circle-container">
-        <div class="progress-circle" id="progressCircle">
-          <div class="progress-text" id="progressText">0%</div>
+      <div class="progress-bar-container">
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="progressBarFill"></div>
+          <div class="progress-indicator" id="progressIndicator"></div>
         </div>
+        <div class="progress-label">進捗</div>
       </div>
-      <div class="progress-label">進捗</div>
     </div>
     
     <!-- 底部信息面板 -->
     <div class="bottom-panel">
-      <div class="time-info">
-        <div class="remaining-time" id="remainingTime">6分</div>
-        <div class="walking-icon">🚶</div>
+      <div class="info-content">
+        <div class="info-item">
+          <div class="info-label">残り時間</div>
+          <div class="info-value" id="remainingTime">6分</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">残り距離</div>
+          <div class="info-value" id="remainingDistance">450m</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">到着予定</div>
+          <div class="info-value" id="arrivalTime">11:02</div>
+        </div>
       </div>
-      <div class="distance-info" id="distanceInfo">450m・11:02</div>
+      <button class="exit-btn" id="exitNav">ナビ終了</button>
     </div>
-    
-    <!-- 退出按钮 -->
-    <button class="exit-btn" id="exitNav">退出</button>
   </div>
 
 
@@ -559,13 +558,12 @@
   
   // 更新进度条
   function updateProgress(percentage) {
-    const progressCircle = document.getElementById('progressCircle');
-    const progressText = document.getElementById('progressText');
+    const progressBarFill = document.getElementById('progressBarFill');
+    const progressIndicator = document.getElementById('progressIndicator');
     
-    // 更新圆形进度条
-    const angle = (percentage / 100) * 360;
-    progressCircle.style.background = `conic-gradient(#007AFF ${angle}deg, #E5E5EA ${angle}deg)`;
-    progressText.textContent = Math.round(percentage) + '%';
+    // 更新纵向进度条
+    progressBarFill.style.height = percentage + '%';
+    progressIndicator.style.top = (100 - percentage) + '%';
   }
   
   // 停止进度跟踪
@@ -677,7 +675,8 @@
     const remainingTime = leg.duration ? leg.duration.text : '0分';
     
     document.getElementById('remainingTime').textContent = remainingTime;
-    document.getElementById('distanceInfo').textContent = `${remainingDistance}・${getArrivalTime()}`;
+    document.getElementById('remainingDistance').textContent = remainingDistance;
+    document.getElementById('arrivalTime').textContent = getArrivalTime();
     
     // 模拟前进到下一步（实际应用中应该基于位置变化）
     if (Math.random() > 0.7) { // 30% 概率进入下一步
