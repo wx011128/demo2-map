@@ -66,7 +66,7 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: #000;
+      background: transparent;
       z-index: 1000;
       display: flex;
       flex-direction: column;
@@ -117,32 +117,31 @@
       height: 100%;
     }
     
-    /* 左侧纵向进度条 */
+    /* 右侧纵向进度条 */
     .progress-sidebar {
       position: absolute;
-      left: 20px;
+      right: 20px;
       top: 50%;
       transform: translateY(-50%);
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
     }
     
     .progress-bar-container {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
     }
     
     .progress-bar-track {
-      width: 8px;
+      width: 12px;
       height: 200px;
       background: #E5E5EA;
-      border-radius: 4px;
+      border-radius: 6px;
       position: relative;
       overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
     
     .progress-bar-fill {
@@ -151,7 +150,7 @@
       left: 0;
       width: 100%;
       background: #4CAF50;
-      border-radius: 4px;
+      border-radius: 6px;
       transition: height 0.5s ease;
       height: 0%;
     }
@@ -160,22 +159,14 @@
       position: absolute;
       left: 50%;
       transform: translateX(-50%);
-      width: 16px;
-      height: 16px;
+      width: 20px;
+      height: 20px;
       background: #4CAF50;
-      border: 3px solid white;
+      border: 4px solid white;
       border-radius: 50%;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       transition: top 0.5s ease;
       top: 0%;
-    }
-    
-    .progress-label {
-      font-size: 12px;
-      color: white;
-      background: rgba(0, 0, 0, 0.6);
-      padding: 4px 8px;
-      border-radius: 12px;
     }
     
     /* 底部信息面板 */
@@ -192,7 +183,7 @@
     
     .info-content {
       display: flex;
-      gap: 24px;
+      gap: 32px;
     }
     
     .info-item {
@@ -200,6 +191,7 @@
       flex-direction: column;
       align-items: center;
       gap: 4px;
+      flex: 1;
     }
     
     .info-label {
@@ -219,12 +211,13 @@
       background: #FF3B30;
       color: white;
       border: none;
-      padding: 12px 20px;
-      border-radius: 20px;
-      font-size: 14px;
+      padding: 8px 16px;
+      border-radius: 16px;
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s ease;
+      margin-top: 4px;
     }
     
     .exit-btn:hover {
@@ -274,14 +267,13 @@
       <div id="navMap"></div>
     </div>
     
-    <!-- 左侧纵向进度条 -->
+    <!-- 右侧纵向进度条 -->
     <div class="progress-sidebar">
       <div class="progress-bar-container">
         <div class="progress-bar-track">
           <div class="progress-bar-fill" id="progressBarFill"></div>
           <div class="progress-indicator" id="progressIndicator"></div>
         </div>
-        <div class="progress-label">進捗</div>
       </div>
     </div>
     
@@ -300,8 +292,10 @@
           <div class="info-label">到着予定</div>
           <div class="info-value" id="arrivalTime">11:02</div>
         </div>
+        <div class="info-item">
+          <button class="exit-btn" id="exitNav">ナビ終了</button>
+        </div>
       </div>
-      <button class="exit-btn" id="exitNav">ナビ終了</button>
     </div>
   </div>
 
@@ -629,10 +623,54 @@
       ]
     });
     
+    // 添加起点标记
+    new google.maps.Marker({
+      position: origin,
+      map: navMap,
+      label: {
+        text: '現在地',
+        color: '#fff',
+        fontSize: '12px',
+        fontWeight: 'bold'
+      },
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 12,
+        fillColor: '#007AFF',
+        fillOpacity: 1,
+        strokeColor: '#fff',
+        strokeWeight: 3
+      },
+      title: '現在地'
+    });
+    
+    // 添加终点标记
+    if (dest) {
+      new google.maps.Marker({
+        position: dest,
+        map: navMap,
+        label: {
+          text: '目的地',
+          color: '#fff',
+          fontSize: '12px',
+          fontWeight: 'bold'
+        },
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 12,
+          fillColor: '#FF3B30',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 3
+        },
+        title: '目的地'
+      });
+    }
+    
     // 添加路线到导航地图
     const navDirectionsRenderer = new google.maps.DirectionsRenderer({
       map: navMap,
-      suppressMarkers: false,
+      suppressMarkers: true, // 使用自定义标记
       polylineOptions: {
         strokeColor: '#007AFF',
         strokeWeight: 4,
@@ -686,9 +724,18 @@
   
   // 获取到达时间
   function getArrivalTime() {
+    if (!currentRoute) return '--:--';
+    
     const now = new Date();
-    const arrival = new Date(now.getTime() + 6 * 60 * 1000); // 模拟6分钟后到达
-    return arrival.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    const leg = currentRoute.legs[0];
+    const durationSeconds = leg.duration ? leg.duration.value : 0;
+    const arrival = new Date(now.getTime() + durationSeconds * 1000);
+    
+    return arrival.toLocaleTimeString('ja-JP', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      timeZone: 'Asia/Tokyo'
+    });
   }
 
   // 全局回调（由 script 的 callback=init 触发）
