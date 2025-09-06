@@ -7,65 +7,102 @@
   <style>
     html,body,#map{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow:hidden}
     
-    /* 搜索栏 */
-    .search-bar {
+    /* 顶部搜索栏 - 完全模仿 Google Maps */
+    .top-search-bar {
       position: absolute;
-      top: 20px;
-      left: 20px;
-      right: 20px;
-      z-index: 1000;
-    }
-    
-    .search-input-container {
-      display: flex;
+      top: 0;
+      left: 0;
+      right: 0;
       background: white;
+      z-index: 1000;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .search-container {
+      padding: 8px 16px;
+    }
+    
+    .search-field {
+      display: flex;
+      align-items: center;
+      background: #f5f5f5;
       border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      overflow: hidden;
+      padding: 8px 12px;
+      margin: 8px 0;
     }
     
-    #search {
-      flex: 1;
-      padding: 12px 16px;
-      border: none;
-      outline: none;
+    .location-icon {
       font-size: 16px;
-      background: transparent;
+      margin-right: 12px;
+      color: #666;
     }
     
-    .search-btn {
-      padding: 12px 16px;
+    .search-input {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .current-location {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 2px;
+    }
+    
+    .destination {
+      font-size: 16px;
+      color: #333;
+      font-weight: 500;
+    }
+    
+    .search-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .action-btn {
+      width: 32px;
+      height: 32px;
       border: none;
       background: transparent;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
-      font-size: 18px;
+      font-size: 16px;
+      color: #666;
     }
     
-    /* 导航指令横幅 */
-    .navigation-banner {
+    .action-btn:hover {
+      background: #e0e0e0;
+    }
+    
+    /* 导航指令横幅 - 完全模仿 Google Maps */
+    .nav-banner {
       position: absolute;
       top: 80px;
-      left: 20px;
-      right: 20px;
+      left: 16px;
+      right: 16px;
       background: #4CAF50;
       color: white;
       padding: 16px;
       border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
       z-index: 1000;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 16px;
     }
     
     .nav-arrow {
       font-size: 24px;
       font-weight: bold;
-      min-width: 30px;
+      min-width: 32px;
       text-align: center;
     }
     
-    .nav-instruction {
+    .nav-text {
       flex: 1;
     }
     
@@ -80,10 +117,10 @@
       opacity: 0.9;
     }
     
-    /* 地图控制按钮 */
+    /* 地图控制按钮 - 完全模仿 Google Maps */
     .map-controls {
       position: absolute;
-      right: 20px;
+      right: 16px;
       top: 50%;
       transform: translateY(-50%);
       display: flex;
@@ -98,7 +135,7 @@
       border: none;
       border-radius: 24px;
       background: white;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
       cursor: pointer;
       font-size: 20px;
       display: flex;
@@ -117,43 +154,43 @@
       color: white;
     }
     
-    /* 底部导航栏 */
-    .bottom-nav {
+    /* 底部信息栏 - 完全模仿 Google Maps */
+    .bottom-info {
       position: absolute;
       bottom: 0;
       left: 0;
       right: 0;
       background: white;
-      padding: 16px 20px;
-      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+      padding: 16px;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
       z-index: 1000;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
     
-    .nav-info {
+    .info-left {
       flex: 1;
     }
     
-    .nav-time {
+    .time-info {
       font-size: 24px;
       font-weight: 600;
       color: #333;
       margin-bottom: 4px;
     }
     
-    .nav-distance {
+    .distance-info {
       font-size: 14px;
       color: #666;
     }
     
-    .nav-controls {
+    .info-right {
       display: flex;
       gap: 12px;
     }
     
-    .nav-control-btn {
+    .info-btn {
       padding: 8px 16px;
       border: 1px solid #ddd;
       border-radius: 20px;
@@ -163,7 +200,7 @@
       transition: all 0.2s ease;
     }
     
-    .nav-control-btn:hover {
+    .info-btn:hover {
       background: #f5f5f5;
     }
     
@@ -204,18 +241,27 @@
 <body>
   <div id="map"></div>
 
-  <!-- 搜索栏 -->
-  <div class="search-bar" id="searchBar">
-    <div class="search-input-container">
-      <input id="search" placeholder="目的地を入力" />
-      <button id="searchBtn" class="search-btn">🔍</button>
+  <!-- 顶部搜索栏 -->
+  <div class="top-search-bar" id="topSearchBar">
+    <div class="search-container">
+      <div class="search-field">
+        <div class="location-icon">📍</div>
+        <div class="search-input">
+          <div class="current-location">現在地</div>
+          <div class="destination" id="destinationText">目的地を入力</div>
+        </div>
+        <div class="search-actions">
+          <button class="action-btn" id="swapBtn">⇅</button>
+          <button class="action-btn" id="menuBtn">⋮</button>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- 导航指令横幅 -->
-  <div class="navigation-banner" id="navigationBanner" style="display: none;">
+  <div class="nav-banner" id="navBanner" style="display: none;">
     <div class="nav-arrow" id="navArrow">↑</div>
-    <div class="nav-instruction">
+    <div class="nav-text">
       <div class="nav-street" id="navStreet">目的地を設定してください</div>
       <div class="nav-direction" id="navDirection"></div>
     </div>
@@ -223,21 +269,21 @@
 
   <!-- 地图控制按钮 -->
   <div class="map-controls">
-    <button class="control-btn" id="arBtn" title="ARナビ">📱</button>
-    <button class="control-btn" id="compassBtn" title="コンパス">🧭</button>
-    <button class="control-btn" id="searchMapBtn" title="検索">🔍</button>
-    <button class="control-btn" id="voiceBtn" title="音声ガイド">🔊</button>
+    <button class="control-btn" id="arBtn">📱</button>
+    <button class="control-btn" id="compassBtn">🧭</button>
+    <button class="control-btn" id="searchBtn">🔍</button>
+    <button class="control-btn" id="voiceBtn">🔊</button>
   </div>
 
-  <!-- 底部导航栏 -->
-  <div class="bottom-nav" id="bottomNav" style="display: none;">
-    <div class="nav-info">
-      <div class="nav-time" id="navTime">0 分</div>
-      <div class="nav-distance" id="navDistance">0 m・到着予定</div>
+  <!-- 底部信息栏 -->
+  <div class="bottom-info" id="bottomInfo" style="display: none;">
+    <div class="info-left">
+      <div class="time-info" id="timeInfo">0 分</div>
+      <div class="distance-info" id="distanceInfo">0 m・到着予定</div>
     </div>
-    <div class="nav-controls">
-      <button class="nav-control-btn" id="routeOptionsBtn">⚡</button>
-      <button class="nav-control-btn exit-btn" id="exitNavBtn">退出</button>
+    <div class="info-right">
+      <button class="info-btn" id="routeBtn">⚡</button>
+      <button class="info-btn exit-btn" id="exitBtn">退出</button>
     </div>
   </div>
 
@@ -251,6 +297,8 @@
   let currentStepIndex = 0;
   let navigationActive = false;
   let voiceEnabled = false;
+  let currentHeading = 0; // 当前朝向角度
+  let locationMarker = null; // 当前位置标记
 
   // 从 URL 获取起点（由小程序拼接），缺省京都站
   function getQueryFloat(name, def){ 
@@ -301,26 +349,11 @@
       panel: null // 使用默认的导航面板
     });
 
-    // 起点标记 - 更明显的当前位置
-    new google.maps.Marker({ 
-      position: origin, 
-      map, 
-      label: {
-        text: '現在地',
-        color: '#fff',
-        fontSize: '12px',
-        fontWeight: 'bold'
-      },
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 12,
-        fillColor: '#007AFF',
-        fillOpacity: 1,
-        strokeColor: '#fff',
-        strokeWeight: 3
-      },
-      title: '現在地'
-    });
+    // 创建当前位置标记（带扇形朝向）
+    createLocationMarker(origin);
+    
+    // 模拟朝向变化（实际应用中应该使用设备传感器）
+    simulateHeadingChange();
 
     // 自动补全
     const input = document.getElementById('search');
@@ -365,25 +398,22 @@
     });
 
 
-    // 搜索按钮
-    document.getElementById('searchBtn').onclick = () => {
-      const keyword = document.getElementById('search').value.trim();
-      if (keyword) {
-        searchAndNavigate(keyword);
-      }
+    // 搜索功能
+    document.getElementById('destinationText').onclick = () => {
+      showSearchModal();
     };
     
     // 控制按钮
     document.getElementById('arBtn').onclick = toggleAR;
     document.getElementById('compassBtn').onclick = toggleCompass;
-    document.getElementById('searchMapBtn').onclick = () => {
-      document.getElementById('search').focus();
+    document.getElementById('searchBtn').onclick = () => {
+      showSearchModal();
     };
     document.getElementById('voiceBtn').onclick = toggleVoice;
     
     // 底部导航控制
-    document.getElementById('routeOptionsBtn').onclick = showRouteOptions;
-    document.getElementById('exitNavBtn').onclick = exitNavigation;
+    document.getElementById('routeBtn').onclick = showRouteOptions;
+    document.getElementById('exitBtn').onclick = exitNavigation;
 
     // 小程序 -> H5 的位置更新：接收 postMessage
     window.addEventListener('message', e => {
@@ -440,6 +470,72 @@
     });
   }
 
+  // 创建当前位置标记（带扇形朝向）
+  function createLocationMarker(position) {
+    // 创建扇形朝向图标
+    const icon = {
+      path: createLocationIcon(),
+      fillColor: '#007AFF',
+      fillOpacity: 1,
+      strokeColor: '#fff',
+      strokeWeight: 2,
+      scale: 1,
+      anchor: new google.maps.Point(12, 12)
+    };
+    
+    locationMarker = new google.maps.Marker({
+      position: position,
+      map: map,
+      icon: icon,
+      title: '現在地',
+      zIndex: 1000
+    });
+  }
+  
+  // 创建扇形朝向图标
+  function createLocationIcon() {
+    const heading = currentHeading;
+    const radius = 20;
+    const coneAngle = 60; // 扇形角度
+    
+    const startAngle = (heading - coneAngle/2) * Math.PI / 180;
+    const endAngle = (heading + coneAngle/2) * Math.PI / 180;
+    
+    const path = [
+      'M 12,12', // 中心点
+      `L ${12 + radius * Math.cos(startAngle)},${12 - radius * Math.sin(startAngle)}`, // 扇形起点
+      `A ${radius},${radius} 0 0,1 ${12 + radius * Math.cos(endAngle)},${12 - radius * Math.sin(endAngle)}`, // 弧线
+      'Z' // 闭合
+    ];
+    
+    return path.join(' ');
+  }
+  
+  // 更新朝向
+  function updateHeading(heading) {
+    currentHeading = heading;
+    if (locationMarker) {
+      const icon = {
+        path: createLocationIcon(),
+        fillColor: '#007AFF',
+        fillOpacity: 1,
+        strokeColor: '#fff',
+        strokeWeight: 2,
+        scale: 1,
+        anchor: new google.maps.Point(12, 12)
+      };
+      locationMarker.setIcon(icon);
+    }
+  }
+  
+  // 显示搜索模态框
+  function showSearchModal() {
+    const keyword = prompt('目的地を入力してください:');
+    if (keyword && keyword.trim()) {
+      searchAndNavigate(keyword.trim());
+    }
+  }
+  
   // 搜索并导航
   function searchAndNavigate(keyword) {
     if (!origin) {
@@ -462,6 +558,9 @@
           lat: place.geometry.location.lat(),
           lng: place.geometry.location.lng()
         };
+        
+        // 更新目的地显示
+        document.getElementById('destinationText').textContent = place.name;
         
         // 添加目的地标记
         new google.maps.Marker({
@@ -536,9 +635,9 @@
   
   // 显示导航界面
   function showNavigationUI() {
-    document.getElementById('navigationBanner').style.display = 'flex';
-    document.getElementById('bottomNav').style.display = 'flex';
-    document.getElementById('searchBar').style.display = 'none';
+    document.getElementById('navBanner').style.display = 'flex';
+    document.getElementById('bottomInfo').style.display = 'flex';
+    document.getElementById('topSearchBar').style.display = 'none';
   }
   
   // 更新导航信息
@@ -572,8 +671,8 @@
     const totalDistance = leg.distance.value;
     const totalDuration = leg.duration.value;
     
-    document.getElementById('navTime').textContent = `${Math.round(totalDuration / 60)} 分`;
-    document.getElementById('navDistance').textContent = 
+    document.getElementById('timeInfo').textContent = `${Math.round(totalDuration / 60)} 分`;
+    document.getElementById('distanceInfo').textContent = 
       `${totalDistance < 1000 ? Math.round(totalDistance) + 'm' : (totalDistance/1000).toFixed(2) + 'km'}・到着予定`;
   }
   
@@ -623,14 +722,23 @@
     currentStepIndex = 0;
     
     // 隐藏导航界面
-    document.getElementById('navigationBanner').style.display = 'none';
-    document.getElementById('bottomNav').style.display = 'none';
-    document.getElementById('searchBar').style.display = 'block';
+    document.getElementById('navBanner').style.display = 'none';
+    document.getElementById('bottomInfo').style.display = 'none';
+    document.getElementById('topSearchBar').style.display = 'block';
     
     // 清除路线
     directionsRenderer.setDirections({routes: []});
     
     showStatus('ナビゲーションを終了しました');
+  }
+  
+  // 模拟朝向变化
+  function simulateHeadingChange() {
+    // 模拟朝向变化（实际应用中应该使用设备传感器）
+    setInterval(() => {
+      currentHeading = (currentHeading + 1) % 360;
+      updateHeading(currentHeading);
+    }, 1000);
   }
   
   // 状态显示
