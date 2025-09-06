@@ -13,16 +13,51 @@
     .pill{padding:8px 12px;border-radius:20px;border:1px solid #ddd;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.2s ease;background:#fff}
     .pill.active{background:#007AFF;color:#fff;border-color:#007AFF;transform:scale(1.05)}
     .pill:hover{transform:scale(1.02)}
-    #search{padding:8px 12px;border:1px solid #ddd;border-radius:20px;font-size:16px;outline:none;flex:1;min-width:200px}
+    #search{padding:12px 16px;border:1px solid #ddd;border-radius:20px;font-size:16px;outline:none;flex:1;min-width:200px;height:44px;box-sizing:border-box}
     #search:focus{border-color:#007AFF;box-shadow:0 0 0 3px rgba(0,122,255,0.1)}
-    #go{padding:8px 16px;background:#007AFF;color:#fff;border:none;border-radius:20px;cursor:pointer;font-weight:600;transition:all 0.2s ease}
+    #go{padding:12px 20px;background:#007AFF;color:#fff;border:none;border-radius:20px;cursor:pointer;font-weight:600;transition:all 0.2s ease;height:44px;box-sizing:border-box;white-space:nowrap}
     #go:hover{background:#0056CC;transform:scale(1.05)}
     #go:disabled{background:#ccc;cursor:not-allowed;transform:none}
     #dist{margin-left:8px;color:#111;font-weight:600;font-size:14px;white-space:nowrap}
-    .status{position:absolute;bottom:20px;left:20px;right:20px;background:rgba(0,0,0,0.8);color:#fff;padding:12px 16px;border-radius:12px;font-size:14px;text-align:center;z-index:10}
-    .loading{display:none;color:#007AFF}
-    .error{display:none;color:#FF3B30}
-    .success{display:none;color:#34C759}
+    /* 进度条样式 */
+    .progress-container {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 16px;
+      padding: 16px 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      z-index: 100;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #E5E5EA;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #007AFF, #34C759);
+      border-radius: 4px;
+      transition: width 0.5s ease;
+      width: 0%;
+    }
+    
+    .progress-text {
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+    }
   </style>
   <!-- 加载 Google Maps JS + Places 库 -->
   <script async
@@ -36,17 +71,20 @@
     <div class="card grow">
       <div class="row">
         <input id="search" placeholder="目的地を入力（日・中・英対応）" />
-        <button id="go">ナビ開始</button>
+        <button id="go">開始</button>
         <span id="dist"></span>
       </div>
     </div>
   </div>
 
-  <div class="status">
-    <div class="loading" id="loading">ルート計算中...</div>
-    <div class="error" id="error">ルート取得に失敗しました</div>
-    <div class="success" id="success">ルートが設定されました</div>
+  <!-- 进度条 -->
+  <div class="progress-container" id="progressContainer" style="display: none;">
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-text" id="progressText">0%</div>
   </div>
+
 
 
 <script>
@@ -54,6 +92,8 @@
   let origin = null;      // [lng, lat]
   let dest = null;        // [lng, lat]
   let travelMode = 'WALKING';
+  let currentRoute = null;
+  let progressInterval = null;
 
   // 从 URL 获取起点（由小程序拼接），缺省京都站
   function getQueryFloat(name, def){ 
@@ -61,15 +101,6 @@
     return v ? parseFloat(v) : def; 
   }
 
-  function showStatus(type) {
-    document.querySelectorAll('.status > div').forEach(el => el.style.display = 'none');
-    document.getElementById(type).style.display = 'block';
-    if (type !== 'loading') {
-      setTimeout(() => {
-        document.getElementById(type).style.display = 'none';
-      }, 3000);
-    }
-  }
 
   function init(){
     const olng = getQueryFloat('olng', 135.759644); // 京都站
@@ -160,7 +191,6 @@
       map.markers.push(destMarker);
       
       map.panTo(dest);
-      showStatus('success');
     });
 
 
@@ -224,11 +254,9 @@
 
   async function routeAndReport(){
     if (!origin || !dest) {
-      showStatus('error');
       return alert('出発地/目的地を設定してください');
     }
     
-    showStatus('loading');
     document.getElementById('go').disabled = true;
     
     directionsService.route({
@@ -241,7 +269,6 @@
       document.getElementById('go').disabled = false;
       
       if (status !== 'OK') {
-        showStatus('error');
         return alert('ルート取得に失敗しました: ' + status);
       }
       
@@ -253,7 +280,9 @@
       document.getElementById('dist').textContent =
         `距離 ${meters < 1000 ? Math.round(meters) + 'm' : (meters/1000).toFixed(2) + 'km'}・約 ${Math.round(seconds/60)} 分`;
 
-      showStatus('success');
+      // 保存路线并开始进度条
+      currentRoute = res.routes[0];
+      startProgressTracking();
 
       // 回传小程序
       if (window.parent && window.parent.postMessage) {
@@ -270,6 +299,48 @@
         }, '*');
       }
     });
+  }
+
+  // 开始进度跟踪
+  function startProgressTracking() {
+    if (!currentRoute) return;
+    
+    // 显示进度条
+    document.getElementById('progressContainer').style.display = 'block';
+    
+    // 模拟进度更新（实际应用中应该基于真实位置）
+    let progress = 0;
+    progressInterval = setInterval(() => {
+      progress += Math.random() * 2; // 随机增加进度
+      if (progress > 100) progress = 100;
+      
+      updateProgress(progress);
+      
+      if (progress >= 100) {
+        clearInterval(progressInterval);
+        setTimeout(() => {
+          document.getElementById('progressContainer').style.display = 'none';
+        }, 2000);
+      }
+    }, 1000);
+  }
+  
+  // 更新进度条
+  function updateProgress(percentage) {
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    
+    progressFill.style.width = percentage + '%';
+    progressText.textContent = Math.round(percentage) + '%';
+  }
+  
+  // 停止进度跟踪
+  function stopProgressTracking() {
+    if (progressInterval) {
+      clearInterval(progressInterval);
+      progressInterval = null;
+    }
+    document.getElementById('progressContainer').style.display = 'none';
   }
 
   // 全局回调（由 script 的 callback=init 触发）
