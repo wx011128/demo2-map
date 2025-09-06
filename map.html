@@ -5,233 +5,24 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <title>ナビゲーション</title>
   <style>
-    html,body,#map{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow:hidden}
-    
-    /* 顶部搜索栏 - 完全模仿 Google Maps */
-    .top-search-bar {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      background: white;
-      z-index: 1000;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .search-container {
-      padding: 8px 16px;
-    }
-    
-    .search-field {
-      display: flex;
-      align-items: center;
-      background: #f5f5f5;
-      border-radius: 8px;
-      padding: 8px 12px;
-      margin: 8px 0;
-    }
-    
-    .location-icon {
-      font-size: 16px;
-      margin-right: 12px;
-      color: #666;
-    }
-    
-    .search-input {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .current-location {
-      font-size: 14px;
-      color: #666;
-      margin-bottom: 2px;
-    }
-    
-    .destination {
-      font-size: 16px;
-      color: #333;
-      font-weight: 500;
-    }
-    
-    .search-actions {
-      display: flex;
-      gap: 8px;
-    }
-    
-    .action-btn {
-      width: 32px;
-      height: 32px;
-      border: none;
-      background: transparent;
-      border-radius: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 16px;
-      color: #666;
-    }
-    
-    .action-btn:hover {
-      background: #e0e0e0;
-    }
-    
-    /* 导航指令横幅 - 完全模仿 Google Maps */
-    .nav-banner {
-      position: absolute;
-      top: 80px;
-      left: 16px;
-      right: 16px;
-      background: #4CAF50;
-      color: white;
-      padding: 16px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    
-    .nav-arrow {
-      font-size: 24px;
-      font-weight: bold;
-      min-width: 32px;
-      text-align: center;
-    }
-    
-    .nav-text {
-      flex: 1;
-    }
-    
-    .nav-street {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-    
-    .nav-direction {
-      font-size: 14px;
-      opacity: 0.9;
-    }
-    
-    /* 地图控制按钮 - 完全模仿 Google Maps */
-    .map-controls {
-      position: absolute;
-      right: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      z-index: 1000;
-    }
-    
-    .control-btn {
-      width: 48px;
-      height: 48px;
-      border: none;
-      border-radius: 24px;
-      background: white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-      cursor: pointer;
-      font-size: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s ease;
-    }
-    
-    .control-btn:hover {
-      background: #f5f5f5;
-      transform: scale(1.05);
-    }
-    
-    .control-btn.active {
-      background: #007AFF;
-      color: white;
-    }
-    
-    /* 底部信息栏 - 完全模仿 Google Maps */
-    .bottom-info {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: white;
-      padding: 16px;
-      box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
-      z-index: 1000;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .info-left {
-      flex: 1;
-    }
-    
-    .time-info {
-      font-size: 24px;
-      font-weight: 600;
-      color: #333;
-      margin-bottom: 4px;
-    }
-    
-    .distance-info {
-      font-size: 14px;
-      color: #666;
-    }
-    
-    .info-right {
-      display: flex;
-      gap: 12px;
-    }
-    
-    .info-btn {
-      padding: 8px 16px;
-      border: 1px solid #ddd;
-      border-radius: 20px;
-      background: white;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.2s ease;
-    }
-    
-    .info-btn:hover {
-      background: #f5f5f5;
-    }
-    
-    .exit-btn {
-      background: #FF3B30;
-      color: white;
-      border-color: #FF3B30;
-    }
-    
-    .exit-btn:hover {
-      background: #d32f2f;
-    }
-    
-    /* 状态指示器 */
-    .status-indicator {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(0,0,0,0.8);
-      color: white;
-      padding: 12px 24px;
-      border-radius: 20px;
-      font-size: 14px;
-      z-index: 1000;
-      display: none;
-    }
-    
-    .status-indicator.show {
-      display: block;
-    }
+    html,body,#map{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+    .panel{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px;z-index:10}
+    .card{background:rgba(255,255,255,0.95);padding:12px 16px;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.15);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.2)}
+    .grow{flex:1}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .pill{padding:8px 12px;border-radius:20px;border:1px solid #ddd;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.2s ease;background:#fff}
+    .pill.active{background:#007AFF;color:#fff;border-color:#007AFF;transform:scale(1.05)}
+    .pill:hover{transform:scale(1.02)}
+    #search{padding:8px 12px;border:1px solid #ddd;border-radius:20px;font-size:16px;outline:none;flex:1;min-width:200px}
+    #search:focus{border-color:#007AFF;box-shadow:0 0 0 3px rgba(0,122,255,0.1)}
+    #go{padding:8px 16px;background:#007AFF;color:#fff;border:none;border-radius:20px;cursor:pointer;font-weight:600;transition:all 0.2s ease}
+    #go:hover{background:#0056CC;transform:scale(1.05)}
+    #go:disabled{background:#ccc;cursor:not-allowed;transform:none}
+    #dist{margin-left:8px;color:#111;font-weight:600;font-size:14px;white-space:nowrap}
+    .status{position:absolute;bottom:20px;left:20px;right:20px;background:rgba(0,0,0,0.8);color:#fff;padding:12px 16px;border-radius:12px;font-size:14px;text-align:center;z-index:10}
+    .loading{display:none;color:#007AFF}
+    .error{display:none;color:#FF3B30}
+    .success{display:none;color:#34C759}
   </style>
   <!-- 加载 Google Maps JS + Places 库 -->
   <script async
@@ -241,50 +32,20 @@
 <body>
   <div id="map"></div>
 
-  <!-- 顶部搜索栏 -->
-  <div class="top-search-bar" id="topSearchBar">
-    <div class="search-container">
-      <div class="search-field">
-        <div class="location-icon">📍</div>
-        <div class="search-input">
-          <div class="current-location">現在地</div>
-          <div class="destination" id="destinationText">目的地を入力</div>
-        </div>
-        <div class="search-actions">
-          <button class="action-btn" id="swapBtn">⇅</button>
-          <button class="action-btn" id="menuBtn">⋮</button>
-        </div>
+  <div class="panel">
+    <div class="card grow">
+      <div class="row">
+        <input id="search" placeholder="目的地を入力（日・中・英対応）" />
+        <button id="go">ナビ開始</button>
+        <span id="dist"></span>
       </div>
     </div>
   </div>
 
-  <!-- 导航指令横幅 -->
-  <div class="nav-banner" id="navBanner" style="display: none;">
-    <div class="nav-arrow" id="navArrow">↑</div>
-    <div class="nav-text">
-      <div class="nav-street" id="navStreet">目的地を設定してください</div>
-      <div class="nav-direction" id="navDirection"></div>
-    </div>
-  </div>
-
-  <!-- 地图控制按钮 -->
-  <div class="map-controls">
-    <button class="control-btn" id="arBtn">📱</button>
-    <button class="control-btn" id="compassBtn">🧭</button>
-    <button class="control-btn" id="searchBtn">🔍</button>
-    <button class="control-btn" id="voiceBtn">🔊</button>
-  </div>
-
-  <!-- 底部信息栏 -->
-  <div class="bottom-info" id="bottomInfo" style="display: none;">
-    <div class="info-left">
-      <div class="time-info" id="timeInfo">0 分</div>
-      <div class="distance-info" id="distanceInfo">0 m・到着予定</div>
-    </div>
-    <div class="info-right">
-      <button class="info-btn" id="routeBtn">⚡</button>
-      <button class="info-btn exit-btn" id="exitBtn">退出</button>
-    </div>
+  <div class="status">
+    <div class="loading" id="loading">ルート計算中...</div>
+    <div class="error" id="error">ルート取得に失敗しました</div>
+    <div class="success" id="success">ルートが設定されました</div>
   </div>
 
 
@@ -293,12 +54,6 @@
   let origin = null;      // [lng, lat]
   let dest = null;        // [lng, lat]
   let travelMode = 'WALKING';
-  let currentRoute = null;
-  let currentStepIndex = 0;
-  let navigationActive = false;
-  let voiceEnabled = false;
-  let currentHeading = 0; // 当前朝向角度
-  let locationMarker = null; // 当前位置标记
 
   // 从 URL 获取起点（由小程序拼接），缺省京都站
   function getQueryFloat(name, def){ 
@@ -342,18 +97,29 @@
         strokeColor: '#007AFF',
         strokeWeight: 4,
         strokeOpacity: 0.8
-      },
-      // 启用 Google Maps 原生导航功能
-      draggable: true,
-      hideRouteList: false,
-      panel: null // 使用默认的导航面板
+      }
     });
 
-    // 创建当前位置标记（带扇形朝向）
-    createLocationMarker(origin);
-    
-    // 模拟朝向变化（实际应用中应该使用设备传感器）
-    simulateHeadingChange();
+    // 起点标记 - 更明显的当前位置
+    new google.maps.Marker({ 
+      position: origin, 
+      map, 
+      label: {
+        text: '現在地',
+        color: '#fff',
+        fontSize: '12px',
+        fontWeight: 'bold'
+      },
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 12,
+        fillColor: '#007AFF',
+        fillOpacity: 1,
+        strokeColor: '#fff',
+        strokeWeight: 3
+      },
+      title: '現在地'
+    });
 
     // 自动补全
     const input = document.getElementById('search');
@@ -398,22 +164,8 @@
     });
 
 
-    // 搜索功能
-    document.getElementById('destinationText').onclick = () => {
-      showSearchModal();
-    };
-    
-    // 控制按钮
-    document.getElementById('arBtn').onclick = toggleAR;
-    document.getElementById('compassBtn').onclick = toggleCompass;
-    document.getElementById('searchBtn').onclick = () => {
-      showSearchModal();
-    };
-    document.getElementById('voiceBtn').onclick = toggleVoice;
-    
-    // 底部导航控制
-    document.getElementById('routeBtn').onclick = showRouteOptions;
-    document.getElementById('exitBtn').onclick = exitNavigation;
+    // 开始导航（计算路线）
+    document.getElementById('go').onclick = routeAndReport;
 
     // 小程序 -> H5 的位置更新：接收 postMessage
     window.addEventListener('message', e => {
@@ -470,159 +222,46 @@
     });
   }
 
-  // 创建当前位置标记（带扇形朝向）
-  function createLocationMarker(position) {
-    // 创建扇形朝向图标
-    const icon = {
-      path: createLocationIcon(),
-      fillColor: '#007AFF',
-      fillOpacity: 1,
-      strokeColor: '#fff',
-      strokeWeight: 2,
-      scale: 1,
-      anchor: new google.maps.Point(12, 12)
-    };
-    
-    locationMarker = new google.maps.Marker({
-      position: position,
-      map: map,
-      icon: icon,
-      title: '現在地',
-      zIndex: 1000
-    });
-  }
-  
-  // 创建扇形朝向图标
-  function createLocationIcon() {
-    const heading = currentHeading;
-    const radius = 20;
-    const coneAngle = 60; // 扇形角度
-    
-    const startAngle = (heading - coneAngle/2) * Math.PI / 180;
-    const endAngle = (heading + coneAngle/2) * Math.PI / 180;
-    
-    const path = [
-      'M 12,12', // 中心点
-      `L ${12 + radius * Math.cos(startAngle)},${12 - radius * Math.sin(startAngle)}`, // 扇形起点
-      `A ${radius},${radius} 0 0,1 ${12 + radius * Math.cos(endAngle)},${12 - radius * Math.sin(endAngle)}`, // 弧线
-      'Z' // 闭合
-    ];
-    
-    return path.join(' ');
-  }
-  
-  // 更新朝向
-  function updateHeading(heading) {
-    currentHeading = heading;
-    if (locationMarker) {
-      const icon = {
-        path: createLocationIcon(),
-        fillColor: '#007AFF',
-        fillOpacity: 1,
-        strokeColor: '#fff',
-        strokeWeight: 2,
-        scale: 1,
-        anchor: new google.maps.Point(12, 12)
-      };
-      locationMarker.setIcon(icon);
-    }
-  }
-  
-  // 显示搜索模态框
-  function showSearchModal() {
-    const keyword = prompt('目的地を入力してください:');
-    if (keyword && keyword.trim()) {
-      searchAndNavigate(keyword.trim());
-    }
-  }
-  
-  // 搜索并导航
-  function searchAndNavigate(keyword) {
-    if (!origin) {
-      showStatus('位置情報を取得中...');
-      return;
+  async function routeAndReport(){
+    if (!origin || !dest) {
+      showStatus('error');
+      return alert('出発地/目的地を設定してください');
     }
     
-    // 使用 Places API 搜索
-    const request = {
-      query: keyword,
-      fields: ['geometry', 'name', 'formatted_address'],
-      locationBias: new google.maps.LatLng(origin.lat, origin.lng)
-    };
-    
-    const service = new google.maps.places.PlacesService(map);
-    service.textSearch(request, (results, status) => {
-      if (status === google.maps.places.PlacesServiceStatus.OK && results[0]) {
-        const place = results[0];
-        dest = {
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng()
-        };
-        
-        // 更新目的地显示
-        document.getElementById('destinationText').textContent = place.name;
-        
-        // 添加目的地标记
-        new google.maps.Marker({
-          position: dest,
-          map: map,
-          title: place.name,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 10,
-            fillColor: '#FF3B30',
-            fillOpacity: 1,
-            strokeColor: '#fff',
-            strokeWeight: 2
-          }
-        });
-        
-        // 开始导航
-        startNavigation();
-      } else {
-        showStatus('場所が見つかりませんでした');
-      }
-    });
-  }
-  
-  // 开始导航
-  function startNavigation() {
-    if (!origin || !dest) return;
-    
-    showStatus('ルート計算中...');
+    showStatus('loading');
+    document.getElementById('go').disabled = true;
     
     directionsService.route({
-      origin: origin,
-      destination: dest,
+      origin, 
+      destination: dest, 
       travelMode: 'WALKING',
       avoidHighways: true,
       avoidTolls: true
     }, (res, status) => {
+      document.getElementById('go').disabled = false;
+      
       if (status !== 'OK') {
-        showStatus('ルート取得に失敗しました');
-        return;
+        showStatus('error');
+        return alert('ルート取得に失敗しました: ' + status);
       }
       
-      // 显示路线
       directionsRenderer.setDirections(res);
-      currentRoute = res.routes[0];
-      currentStepIndex = 0;
-      navigationActive = true;
-      
-      // 显示导航界面
-      showNavigationUI();
-      
-      // 更新导航信息
-      updateNavigationInfo();
-      
-      // 回传小程序
       const leg = res.routes[0].legs[0];
+      const meters = leg.distance.value;       // 米
+      const seconds = leg.duration.value;      // 秒
+      
+      document.getElementById('dist').textContent =
+        `距離 ${meters < 1000 ? Math.round(meters) + 'm' : (meters/1000).toFixed(2) + 'km'}・約 ${Math.round(seconds/60)} 分`;
+
+      showStatus('success');
+
+      // 回传小程序
       if (window.parent && window.parent.postMessage) {
         window.parent.postMessage({
           type: 'routeUpdate',
           payload: {
-            distanceMeters: leg.distance.value,
-            durationSeconds: leg.duration.value,
+            distanceMeters: meters,
+            durationSeconds: seconds,
             mode: 'WALKING',
             origin: origin,
             destination: dest,
@@ -631,133 +270,6 @@
         }, '*');
       }
     });
-  }
-  
-  // 显示导航界面
-  function showNavigationUI() {
-    document.getElementById('navBanner').style.display = 'flex';
-    document.getElementById('bottomInfo').style.display = 'flex';
-    document.getElementById('topSearchBar').style.display = 'none';
-  }
-  
-  // 更新导航信息
-  function updateNavigationInfo() {
-    if (!currentRoute || !navigationActive) return;
-    
-    const steps = currentRoute.legs[0].steps;
-    const totalSteps = steps.length;
-    
-    if (currentStepIndex >= totalSteps) {
-      // 到达目的地
-      document.getElementById('navStreet').textContent = '目的地に到着しました！';
-      document.getElementById('navDirection').textContent = '';
-      document.getElementById('navArrow').textContent = '✓';
-      return;
-    }
-    
-    const currentStep = steps[currentStepIndex];
-    const instruction = currentStep.instructions.replace(/<[^>]*>/g, '');
-    const distance = currentStep.distance ? currentStep.distance.text : '';
-    
-    // 更新导航横幅
-    document.getElementById('navStreet').textContent = instruction;
-    document.getElementById('navDirection').textContent = distance;
-    
-    // 更新箭头方向
-    updateNavigationArrow(currentStep);
-    
-    // 更新底部信息
-    const leg = currentRoute.legs[0];
-    const totalDistance = leg.distance.value;
-    const totalDuration = leg.duration.value;
-    
-    document.getElementById('timeInfo').textContent = `${Math.round(totalDuration / 60)} 分`;
-    document.getElementById('distanceInfo').textContent = 
-      `${totalDistance < 1000 ? Math.round(totalDistance) + 'm' : (totalDistance/1000).toFixed(2) + 'km'}・到着予定`;
-  }
-  
-  // 更新导航箭头
-  function updateNavigationArrow(step) {
-    const arrow = document.getElementById('navArrow');
-    const instruction = step.instructions.toLowerCase();
-    
-    if (instruction.includes('左') || instruction.includes('left')) {
-      arrow.textContent = '←';
-    } else if (instruction.includes('右') || instruction.includes('right')) {
-      arrow.textContent = '→';
-    } else if (instruction.includes('直進') || instruction.includes('straight')) {
-      arrow.textContent = '↑';
-    } else if (instruction.includes('戻る') || instruction.includes('back')) {
-      arrow.textContent = '↓';
-    } else {
-      arrow.textContent = '↑';
-    }
-  }
-  
-  // 控制按钮功能
-  function toggleAR() {
-    showStatus('ARナビは準備中です');
-  }
-  
-  function toggleCompass() {
-    const btn = document.getElementById('compassBtn');
-    btn.classList.toggle('active');
-    showStatus(btn.classList.contains('active') ? 'コンパスオン' : 'コンパスオフ');
-  }
-  
-  function toggleVoice() {
-    voiceEnabled = !voiceEnabled;
-    const btn = document.getElementById('voiceBtn');
-    btn.classList.toggle('active');
-    showStatus(voiceEnabled ? '音声ガイドオン' : '音声ガイドオフ');
-  }
-  
-  function showRouteOptions() {
-    showStatus('ルートオプションは準備中です');
-  }
-  
-  function exitNavigation() {
-    navigationActive = false;
-    currentRoute = null;
-    currentStepIndex = 0;
-    
-    // 隐藏导航界面
-    document.getElementById('navBanner').style.display = 'none';
-    document.getElementById('bottomInfo').style.display = 'none';
-    document.getElementById('topSearchBar').style.display = 'block';
-    
-    // 清除路线
-    directionsRenderer.setDirections({routes: []});
-    
-    showStatus('ナビゲーションを終了しました');
-  }
-  
-  // 模拟朝向变化
-  function simulateHeadingChange() {
-    // 模拟朝向变化（实际应用中应该使用设备传感器）
-    setInterval(() => {
-      currentHeading = (currentHeading + 1) % 360;
-      updateHeading(currentHeading);
-    }, 1000);
-  }
-  
-  // 状态显示
-  function showStatus(message) {
-    // 创建或更新状态指示器
-    let indicator = document.getElementById('statusIndicator');
-    if (!indicator) {
-      indicator = document.createElement('div');
-      indicator.id = 'statusIndicator';
-      indicator.className = 'status-indicator';
-      document.body.appendChild(indicator);
-    }
-    
-    indicator.textContent = message;
-    indicator.classList.add('show');
-    
-    setTimeout(() => {
-      indicator.classList.remove('show');
-    }, 2000);
   }
 
   // 全局回调（由 script 的 callback=init 触发）
