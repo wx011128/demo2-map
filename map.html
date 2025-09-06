@@ -13,9 +13,9 @@
     .pill{padding:8px 12px;border-radius:20px;border:1px solid #ddd;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.2s ease;background:#fff}
     .pill.active{background:#007AFF;color:#fff;border-color:#007AFF;transform:scale(1.05)}
     .pill:hover{transform:scale(1.02)}
-    #search{padding:12px 16px;border:1px solid #ddd;border-radius:20px;font-size:16px;outline:none;flex:1;min-width:200px;height:44px;box-sizing:border-box}
+    #search{padding:12px 16px;border:1px solid #ddd;border-radius:22px;font-size:16px;outline:none;flex:1;min-width:200px;height:44px;box-sizing:border-box}
     #search:focus{border-color:#007AFF;box-shadow:0 0 0 3px rgba(0,122,255,0.1)}
-    #go{padding:12px 20px;background:#007AFF;color:#fff;border:none;border-radius:20px;cursor:pointer;font-weight:600;transition:all 0.2s ease;height:44px;box-sizing:border-box;white-space:nowrap}
+    #go{padding:12px 20px;background:#007AFF;color:#fff;border:none;border-radius:22px;cursor:pointer;font-weight:600;transition:all 0.2s ease;height:44px;box-sizing:border-box;white-space:nowrap}
     #go:hover{background:#0056CC;transform:scale(1.05)}
     #go:disabled{background:#ccc;cursor:not-allowed;transform:none}
     #dist{margin-left:8px;color:#111;font-weight:600;font-size:14px;white-space:nowrap}
@@ -58,6 +58,72 @@
       font-weight: 600;
       color: #333;
     }
+    
+    /* 导航指引面板样式 */
+    .navigation-guide {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      z-index: 200;
+    }
+    
+    .guide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .guide-header h3 {
+      margin: 0;
+      color: #333;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .stop-guide-btn {
+      background: #FF3B30;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 16px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .stop-guide-btn:hover {
+      background: #D70015;
+      transform: scale(1.05);
+    }
+    
+    .guide-content {
+      text-align: center;
+    }
+    
+    .current-instruction {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+      line-height: 1.4;
+      min-height: 22px;
+    }
+    
+    .instruction-distance {
+      font-size: 14px;
+      color: #666;
+      font-weight: 500;
+    }
   </style>
   <!-- 加载 Google Maps JS + Places 库 -->
   <script async
@@ -85,6 +151,22 @@
     <div class="progress-text" id="progressText">0%</div>
   </div>
 
+  <!-- 导航指引面板 -->
+  <div class="navigation-guide" id="navigationGuide" style="display: none;">
+    <div class="guide-header">
+      <h3>ナビゲーション</h3>
+      <button id="stopGuide" class="stop-guide-btn">停止</button>
+    </div>
+    <div class="guide-content">
+      <div class="current-instruction" id="currentInstruction">
+        ナビゲーションを開始してください
+      </div>
+      <div class="instruction-distance" id="instructionDistance">
+        目的地まで 0m
+      </div>
+    </div>
+  </div>
+
 
 
 <script>
@@ -94,6 +176,8 @@
   let travelMode = 'WALKING';
   let currentRoute = null;
   let progressInterval = null;
+  let guideInterval = null;
+  let currentStepIndex = 0;
 
   // 从 URL 获取起点（由小程序拼接），缺省京都站
   function getQueryFloat(name, def){ 
@@ -196,6 +280,9 @@
 
     // 开始导航（计算路线）
     document.getElementById('go').onclick = routeAndReport;
+    
+    // 停止导航指引
+    document.getElementById('stopGuide').onclick = stopNavigationGuide;
 
     // 小程序 -> H5 的位置更新：接收 postMessage
     window.addEventListener('message', e => {
@@ -280,9 +367,11 @@
       document.getElementById('dist').textContent =
         `距離 ${meters < 1000 ? Math.round(meters) + 'm' : (meters/1000).toFixed(2) + 'km'}・約 ${Math.round(seconds/60)} 分`;
 
-      // 保存路线并开始进度条
+      // 保存路线并开始进度条和导航指引
       currentRoute = res.routes[0];
+      currentStepIndex = 0;
       startProgressTracking();
+      startNavigationGuide();
 
       // 回传小程序
       if (window.parent && window.parent.postMessage) {
@@ -308,21 +397,25 @@
     // 显示进度条
     document.getElementById('progressContainer').style.display = 'block';
     
-    // 模拟进度更新（实际应用中应该基于真实位置）
-    let progress = 0;
+    // 获取总距离
+    const totalDistance = currentRoute.legs[0].distance.value; // 米
+    let currentDistance = 0; // 当前已走距离
+    
+    // 基于实际位置更新进度
     progressInterval = setInterval(() => {
-      progress += Math.random() * 2; // 随机增加进度
-      if (progress > 100) progress = 100;
+      // 这里应该获取用户当前位置，现在用模拟数据
+      // 实际应用中应该调用 wx.getLocation() 获取真实位置
+      const simulatedProgress = Math.min(currentDistance / totalDistance * 100, 100);
       
-      updateProgress(progress);
+      updateProgress(simulatedProgress);
       
-      if (progress >= 100) {
+      if (simulatedProgress >= 100) {
         clearInterval(progressInterval);
         setTimeout(() => {
           document.getElementById('progressContainer').style.display = 'none';
         }, 2000);
       }
-    }, 1000);
+    }, 2000);
   }
   
   // 更新进度条
@@ -341,6 +434,58 @@
       progressInterval = null;
     }
     document.getElementById('progressContainer').style.display = 'none';
+  }
+  
+  // 开始导航指引
+  function startNavigationGuide() {
+    if (!currentRoute) return;
+    
+    // 显示导航指引面板
+    document.getElementById('navigationGuide').style.display = 'block';
+    
+    // 更新指引内容
+    updateNavigationGuide();
+    
+    // 定期更新指引（模拟位置变化）
+    guideInterval = setInterval(() => {
+      updateNavigationGuide();
+    }, 3000);
+  }
+  
+  // 停止导航指引
+  function stopNavigationGuide() {
+    if (guideInterval) {
+      clearInterval(guideInterval);
+      guideInterval = null;
+    }
+    document.getElementById('navigationGuide').style.display = 'none';
+    stopProgressTracking();
+  }
+  
+  // 更新导航指引
+  function updateNavigationGuide() {
+    if (!currentRoute) return;
+    
+    const steps = currentRoute.legs[0].steps;
+    const totalSteps = steps.length;
+    
+    if (currentStepIndex >= totalSteps) {
+      document.getElementById('currentInstruction').textContent = '目的地に到着しました！';
+      document.getElementById('instructionDistance').textContent = 'お疲れ様でした';
+      return;
+    }
+    
+    const currentStep = steps[currentStepIndex];
+    const instruction = currentStep.instructions.replace(/<[^>]*>/g, ''); // 移除HTML标签
+    const distance = currentStep.distance ? currentStep.distance.text : '';
+    
+    document.getElementById('currentInstruction').textContent = instruction;
+    document.getElementById('instructionDistance').textContent = `次の指示まで ${distance}`;
+    
+    // 模拟前进到下一步（实际应用中应该基于位置变化）
+    if (Math.random() > 0.7) { // 30% 概率进入下一步
+      currentStepIndex++;
+    }
   }
 
   // 全局回调（由 script 的 callback=init 触发）
