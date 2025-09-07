@@ -645,14 +645,15 @@
     let lastKnownLocation = null; // 上次已知位置
     let totalTraveledDistance = 0; // 总已走距离
     
+    // 初始化进度为0
+    updateProgress(0);
+    
     // 基于实际位置更新进度
     progressInterval = setInterval(() => {
-      // 模拟获取用户当前位置（实际应用中应该调用 wx.getLocation()）
       if (currentLocation) {
         // 如果是第一次获取位置，记录为起始位置
         if (!lastKnownLocation) {
           lastKnownLocation = currentLocation;
-          updateProgress(0);
           return;
         }
         
@@ -685,7 +686,7 @@
           console.log('已到达目的地！');
         }
       }
-    }, 2000);
+    }, 3000); // 每3秒检查一次位置变化，与位置更新同步
   }
 
   // 计算两点间距离（米）
@@ -747,30 +748,34 @@
     // 定期更新导航信息
     guideInterval = setInterval(() => {
       updateNavigationInfo();
-    }, 1000); // 更频繁地更新，确保实时性
+    }, 3000); // 每3秒更新一次，避免过度更新
   }
 
-  // 开始模拟位置更新
+  // 开始位置更新（基于小程序传递的位置）
   function startLocationSimulation() {
-    // 模拟用户从起点向终点移动
-    let simulationStep = 0;
-    const totalSteps = 200; // 增加步数，使移动更平滑
+    // 使用小程序传递的位置作为初始位置
+    currentLocation = { lat: origin.lat, lng: origin.lng };
     
-    const simulationInterval = setInterval(() => {
-      if (simulationStep >= totalSteps) {
-        clearInterval(simulationInterval);
-        return;
+    console.log('使用小程序传递的位置:', currentLocation);
+    
+    // 在实际应用中，小程序会定期更新URL参数来传递新位置
+    // 这里我们监听URL变化来获取新位置
+    let lastUrl = location.href;
+    const urlCheckInterval = setInterval(() => {
+      if (location.href !== lastUrl) {
+        // URL发生变化，重新获取位置参数
+        const newOlat = getQueryFloat('olat', origin.lat);
+        const newOlng = getQueryFloat('olng', origin.lng);
+        
+        if (newOlat !== origin.lat || newOlng !== origin.lng) {
+          origin = { lat: newOlat, lng: newOlng };
+          currentLocation = { lat: newOlat, lng: newOlng };
+          console.log('位置更新:', currentLocation);
+        }
+        
+        lastUrl = location.href;
       }
-      
-      // 计算当前位置（在起点和终点之间）
-      const lat = origin.lat + (dest.lat - origin.lat) * (simulationStep / totalSteps);
-      const lng = origin.lng + (dest.lng - origin.lng) * (simulationStep / totalSteps);
-      
-      currentLocation = { lat: lat, lng: lng };
-      simulationStep++;
-      
-      console.log('模拟位置更新:', currentLocation, '步骤:', simulationStep);
-    }, 2000); // 每2秒更新一次位置，模拟真实步行速度
+    }, 1000); // 每秒检查一次URL变化
   }
   
   // 退出导航模式
