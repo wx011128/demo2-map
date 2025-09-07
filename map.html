@@ -639,41 +639,41 @@
     
     // 获取总距离
     const totalDistance = currentRoute.legs[0].distance.value; // 米
-    let currentDistance = 0; // 当前已走距离
-    let isTracking = false; // 是否开始跟踪
+    let lastKnownLocation = null; // 上次已知位置
+    let totalTraveledDistance = 0; // 总已走距离
     
     // 基于实际位置更新进度
     progressInterval = setInterval(() => {
       // 模拟获取用户当前位置（实际应用中应该调用 wx.getLocation()）
       if (currentLocation) {
-        // 计算当前位置到目的地的距离
-        const remainingDistance = calculateDistance(currentLocation, dest);
-        const traveledDistance = totalDistance - remainingDistance;
-        const progress = Math.max(0, Math.min(100, (traveledDistance / totalDistance) * 100));
+        // 如果是第一次获取位置，记录为起始位置
+        if (!lastKnownLocation) {
+          lastKnownLocation = currentLocation;
+          updateProgress(0);
+          return;
+        }
         
-        // 只有当用户真正移动时才更新进度
-        if (progress > 0) {
-          isTracking = true;
+        // 计算从上次位置到当前位置的距离
+        const distanceMoved = calculateDistance(lastKnownLocation, currentLocation);
+        
+        // 只有当用户真正移动了（移动距离大于10米）时才更新进度
+        if (distanceMoved > 10) {
+          totalTraveledDistance += distanceMoved;
+          const progress = Math.max(0, Math.min(100, (totalTraveledDistance / totalDistance) * 100));
+          
           updateProgress(progress);
           
           // 更新当前位置标记
           if (currentLocationMarker) {
             currentLocationMarker.setPosition(currentLocation);
           }
-        }
-        
-        if (progress >= 100) {
-          clearInterval(progressInterval);
-        }
-      } else {
-        // 模拟用户移动 - 但只有在用户开始移动后才开始模拟
-        if (isTracking) {
-          currentDistance += Math.random() * 50; // 模拟每2秒走0-50米
-          const simulatedProgress = Math.min(currentDistance / totalDistance * 100, 100);
           
-          updateProgress(simulatedProgress);
+          // 更新上次已知位置
+          lastKnownLocation = currentLocation;
           
-          if (simulatedProgress >= 100) {
+          console.log('用户移动了', distanceMoved.toFixed(2), '米，总进度:', progress.toFixed(2) + '%');
+          
+          if (progress >= 100) {
             clearInterval(progressInterval);
           }
         }
@@ -732,8 +732,10 @@
     // 开始模拟位置更新（用于测试）
     startLocationSimulation();
     
-    // 开始进度跟踪
-    startProgressTracking();
+    // 延迟开始进度跟踪，确保位置模拟先开始
+    setTimeout(() => {
+      startProgressTracking();
+    }, 1000);
     
     // 定期更新导航信息
     guideInterval = setInterval(() => {
@@ -745,13 +747,39 @@
   function startLocationSimulation() {
     // 模拟用户从起点向终点移动
     let simulationStep = 0;
-    const totalSteps = 100;
+    const totalSteps = 200; // 增加步数，使移动更平滑
+    let isMoving = false; // 是否正在移动
+    
+    // 添加手动开始移动的按钮（用于测试）
+    const startButton = document.createElement('button');
+    startButton.textContent = '开始移动测试';
+    startButton.style.cssText = `
+      position: absolute;
+      top: 80px;
+      right: 20px;
+      background: #007AFF;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      z-index: 1002;
+      cursor: pointer;
+    `;
+    startButton.onclick = () => {
+      isMoving = true;
+      startButton.style.display = 'none';
+    };
+    document.getElementById('navigationScreen').appendChild(startButton);
     
     const simulationInterval = setInterval(() => {
       if (simulationStep >= totalSteps) {
         clearInterval(simulationInterval);
         return;
       }
+      
+      // 只有在用户点击开始移动后才开始模拟
+      if (!isMoving) return;
       
       // 计算当前位置（在起点和终点之间）
       const lat = origin.lat + (dest.lat - origin.lat) * (simulationStep / totalSteps);
@@ -760,8 +788,8 @@
       currentLocation = { lat: lat, lng: lng };
       simulationStep++;
       
-      console.log('模拟位置更新:', currentLocation);
-    }, 1000); // 每秒更新一次位置
+      console.log('模拟位置更新:', currentLocation, '步骤:', simulationStep);
+    }, 2000); // 每2秒更新一次位置，模拟真实步行速度
   }
   
   // 退出导航模式
@@ -893,19 +921,56 @@
     document.getElementById('currentStreet').textContent = streetMatch ? streetMatch[1] : '現在地';
     document.getElementById('nextAction').textContent = actionMatch ? actionMatch[1] : instruction;
     
-    // 更新底部信息
-    const leg = currentRoute.legs[0];
-    const remainingDistance = leg.distance ? leg.distance.text : '0m';
-    const remainingTime = leg.duration ? leg.duration.text : '0分';
+    // 实时更新底部信息
+    updateBottomInfo();
+  }
+
+  // 更新底部信息
+  function updateBottomInfo() {
+    if (!currentRoute || !currentLocation) return;
     
-    document.getElementById('remainingTime').textContent = remainingTime;
-    document.getElementById('remainingDistance').textContent = remainingDistance;
-    document.getElementById('arrivalTime').textContent = getArrivalTime();
+    // 计算当前位置到目的地的距离
+    const remainingDistanceMeters = calculateDistance(currentLocation, dest);
+    const totalDistanceMeters = currentRoute.legs[0].distance.value;
     
-    // 模拟前进到下一步（实际应用中应该基于位置变化）
-    if (Math.random() > 0.7) { // 30% 概率进入下一步
-      currentStepIndex++;
+    // 计算剩余时间（基于步行速度 5km/h）
+    const walkingSpeed = 5000 / 3600; // 米/秒
+    const remainingTimeSeconds = remainingDistanceMeters / walkingSpeed;
+    const remainingTimeMinutes = Math.round(remainingTimeSeconds / 60);
+    
+    // 更新剩余距离
+    let distanceText;
+    if (remainingDistanceMeters < 1000) {
+      distanceText = Math.round(remainingDistanceMeters) + 'm';
+    } else {
+      distanceText = (remainingDistanceMeters / 1000).toFixed(2) + 'km';
     }
+    
+    // 更新剩余时间
+    let timeText;
+    if (remainingTimeMinutes < 60) {
+      timeText = remainingTimeMinutes + '分';
+    } else {
+      const hours = Math.floor(remainingTimeMinutes / 60);
+      const minutes = remainingTimeMinutes % 60;
+      timeText = hours + '時間' + (minutes > 0 ? minutes + '分' : '');
+    }
+    
+    // 计算到达时间
+    const now = new Date();
+    const arrivalTime = new Date(now.getTime() + remainingTimeSeconds * 1000);
+    const arrivalTimeText = arrivalTime.toLocaleTimeString('ja-JP', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      timeZone: 'Asia/Tokyo'
+    });
+    
+    // 更新DOM
+    document.getElementById('remainingTime').textContent = timeText;
+    document.getElementById('remainingDistance').textContent = distanceText;
+    document.getElementById('arrivalTime').textContent = arrivalTimeText;
+    
+    console.log('更新信息 - 剩余距离:', distanceText, '剩余时间:', timeText, '到达时间:', arrivalTimeText);
   }
   
   // 获取到达时间
