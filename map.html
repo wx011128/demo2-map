@@ -125,8 +125,8 @@
     .progress-sidebar {
       position: absolute;
       right: 20px;
-      top: 50%;
-      transform: translateY(-50%);
+      top: 120px;
+      bottom: 120px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -136,13 +136,14 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      height: 100%;
     }
     
     .progress-bar-track {
-      width: 12px;
-      height: 200px;
+      width: 8px;
+      height: 100%;
       background: #E5E5EA;
-      border-radius: 6px;
+      border-radius: 4px;
       position: relative;
       overflow: visible;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -154,7 +155,7 @@
       left: 0;
       width: 100%;
       background: #4CAF50;
-      border-radius: 6px;
+      border-radius: 4px;
       transition: height 0.5s ease;
       height: 0%;
     }
@@ -163,10 +164,10 @@
       position: absolute;
       left: 50%;
       transform: translateX(-50%);
-      width: 20px;
-      height: 20px;
+      width: 16px;
+      height: 16px;
       background: #4CAF50;
-      border: 4px solid white;
+      border: 3px solid white;
       border-radius: 50%;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       transition: top 0.5s ease;
@@ -191,7 +192,8 @@
     
     .info-content {
       display: flex;
-      gap: 24px;
+      gap: 20px;
+      flex: 1;
     }
     
     .info-item {
@@ -199,6 +201,7 @@
       flex-direction: column;
       align-items: center;
       gap: 4px;
+      flex: 1;
     }
     
     .info-label {
@@ -656,8 +659,8 @@
         // 计算从上次位置到当前位置的距离
         const distanceMoved = calculateDistance(lastKnownLocation, currentLocation);
         
-        // 只有当用户真正移动了（移动距离大于10米）时才更新进度
-        if (distanceMoved > 10) {
+        // 只有当用户真正移动了（移动距离大于5米）时才更新进度
+        if (distanceMoved > 5) {
           totalTraveledDistance += distanceMoved;
           const progress = Math.max(0, Math.min(100, (totalTraveledDistance / totalDistance) * 100));
           
@@ -672,10 +675,14 @@
           lastKnownLocation = currentLocation;
           
           console.log('用户移动了', distanceMoved.toFixed(2), '米，总进度:', progress.toFixed(2) + '%');
-          
-          if (progress >= 100) {
-            clearInterval(progressInterval);
-          }
+        }
+        
+        // 检查是否到达目的地（距离小于50米）
+        const distanceToDestination = calculateDistance(currentLocation, dest);
+        if (distanceToDestination < 50) {
+          updateProgress(100);
+          clearInterval(progressInterval);
+          console.log('已到达目的地！');
         }
       }
     }, 2000);
@@ -740,7 +747,7 @@
     // 定期更新导航信息
     guideInterval = setInterval(() => {
       updateNavigationInfo();
-    }, 3000);
+    }, 1000); // 更频繁地更新，确保实时性
   }
 
   // 开始模拟位置更新
@@ -748,38 +755,12 @@
     // 模拟用户从起点向终点移动
     let simulationStep = 0;
     const totalSteps = 200; // 增加步数，使移动更平滑
-    let isMoving = false; // 是否正在移动
-    
-    // 添加手动开始移动的按钮（用于测试）
-    const startButton = document.createElement('button');
-    startButton.textContent = '开始移动测试';
-    startButton.style.cssText = `
-      position: absolute;
-      top: 80px;
-      right: 20px;
-      background: #007AFF;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-size: 12px;
-      z-index: 1002;
-      cursor: pointer;
-    `;
-    startButton.onclick = () => {
-      isMoving = true;
-      startButton.style.display = 'none';
-    };
-    document.getElementById('navigationScreen').appendChild(startButton);
     
     const simulationInterval = setInterval(() => {
       if (simulationStep >= totalSteps) {
         clearInterval(simulationInterval);
         return;
       }
-      
-      // 只有在用户点击开始移动后才开始模拟
-      if (!isMoving) return;
       
       // 计算当前位置（在起点和终点之间）
       const lat = origin.lat + (dest.lat - origin.lat) * (simulationStep / totalSteps);
@@ -899,27 +880,79 @@
   
   // 更新导航信息
   function updateNavigationInfo() {
-    if (!currentRoute) return;
+    if (!currentRoute || !currentLocation) return;
     
     const steps = currentRoute.legs[0].steps;
     const totalSteps = steps.length;
     
-    if (currentStepIndex >= totalSteps) {
+    // 检查是否到达目的地
+    const distanceToDestination = calculateDistance(currentLocation, dest);
+    if (distanceToDestination < 50) {
       document.getElementById('currentStreet').textContent = '目的地到着';
       document.getElementById('nextAction').textContent = 'お疲れ様でした';
       return;
     }
     
-    const currentStep = steps[currentStepIndex];
+    // 找到当前最接近的步骤
+    let closestStepIndex = 0;
+    let minDistance = Infinity;
+    
+    for (let i = 0; i < totalSteps; i++) {
+      const step = steps[i];
+      const stepStart = step.start_location;
+      const stepEnd = step.end_location;
+      
+      // 计算到步骤起点和终点的距离
+      const distanceToStart = calculateDistance(currentLocation, {
+        lat: stepStart.lat(),
+        lng: stepStart.lng()
+      });
+      const distanceToEnd = calculateDistance(currentLocation, {
+        lat: stepEnd.lat(),
+        lng: stepEnd.lng()
+      });
+      
+      // 选择距离较近的步骤
+      const stepDistance = Math.min(distanceToStart, distanceToEnd);
+      if (stepDistance < minDistance) {
+        minDistance = stepDistance;
+        closestStepIndex = i;
+      }
+    }
+    
+    const currentStep = steps[closestStepIndex];
     const instruction = currentStep.instructions.replace(/<[^>]*>/g, ''); // 移除HTML标签
-    const distance = currentStep.distance ? currentStep.distance.text : '';
+    const distance = currentStep.distance ? currentStep.distance.value : 0;
     
     // 解析指令，提取街道名和动作
-    const streetMatch = instruction.match(/(.+?)(?:に|で|を)/);
-    const actionMatch = instruction.match(/(?:に|で|を)(.+)/);
+    let streetName = '現在地';
+    let action = instruction;
     
-    document.getElementById('currentStreet').textContent = streetMatch ? streetMatch[1] : '現在地';
-    document.getElementById('nextAction').textContent = actionMatch ? actionMatch[1] : instruction;
+    // 尝试提取街道名
+    const streetMatch = instruction.match(/(.+?)(?:に|で|を|へ)/);
+    if (streetMatch) {
+      streetName = streetMatch[1].trim();
+    }
+    
+    // 尝试提取动作
+    const actionMatch = instruction.match(/(?:に|で|を|へ)(.+)/);
+    if (actionMatch) {
+      action = actionMatch[1].trim();
+    }
+    
+    // 格式化距离显示
+    let distanceText = '';
+    if (distance > 0) {
+      if (distance < 1000) {
+        distanceText = Math.round(distance) + 'm';
+      } else {
+        distanceText = (distance / 1000).toFixed(1) + 'km';
+      }
+    }
+    
+    // 更新显示
+    document.getElementById('currentStreet').textContent = streetName;
+    document.getElementById('nextAction').textContent = action + (distanceText ? ' (' + distanceText + ')' : '');
     
     // 实时更新底部信息
     updateBottomInfo();
