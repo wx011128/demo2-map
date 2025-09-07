@@ -86,6 +86,7 @@
       gap: 12px;
       border-radius: 16px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1001;
     }
     
     .direction-icon {
@@ -143,7 +144,7 @@
       background: #E5E5EA;
       border-radius: 6px;
       position: relative;
-      overflow: hidden;
+      overflow: visible;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
     
@@ -170,6 +171,7 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       transition: top 0.5s ease;
       top: 0%;
+      z-index: 10;
     }
     
     /* 底部信息面板 */
@@ -461,11 +463,11 @@
       },
       icon: {
         path: google.maps.SymbolPath.CIRCLE,
-        scale: 12,
+        scale: 8,
         fillColor: '#007AFF',
         fillOpacity: 1,
         strokeColor: '#fff',
-        strokeWeight: 3
+        strokeWeight: 2
       },
       title: '現在地'
     });
@@ -638,6 +640,7 @@
     // 获取总距离
     const totalDistance = currentRoute.legs[0].distance.value; // 米
     let currentDistance = 0; // 当前已走距离
+    let isTracking = false; // 是否开始跟踪
     
     // 基于实际位置更新进度
     progressInterval = setInterval(() => {
@@ -648,25 +651,31 @@
         const traveledDistance = totalDistance - remainingDistance;
         const progress = Math.max(0, Math.min(100, (traveledDistance / totalDistance) * 100));
         
-        updateProgress(progress);
-        
-        // 更新当前位置标记
-        if (currentLocationMarker) {
-          currentLocationMarker.setPosition(currentLocation);
+        // 只有当用户真正移动时才更新进度
+        if (progress > 0) {
+          isTracking = true;
+          updateProgress(progress);
+          
+          // 更新当前位置标记
+          if (currentLocationMarker) {
+            currentLocationMarker.setPosition(currentLocation);
+          }
         }
         
         if (progress >= 100) {
           clearInterval(progressInterval);
         }
       } else {
-        // 模拟用户移动
-        currentDistance += Math.random() * 50; // 模拟每2秒走0-50米
-        const simulatedProgress = Math.min(currentDistance / totalDistance * 100, 100);
-        
-        updateProgress(simulatedProgress);
-        
-        if (simulatedProgress >= 100) {
-          clearInterval(progressInterval);
+        // 模拟用户移动 - 但只有在用户开始移动后才开始模拟
+        if (isTracking) {
+          currentDistance += Math.random() * 50; // 模拟每2秒走0-50米
+          const simulatedProgress = Math.min(currentDistance / totalDistance * 100, 100);
+          
+          updateProgress(simulatedProgress);
+          
+          if (simulatedProgress >= 100) {
+            clearInterval(progressInterval);
+          }
         }
       }
     }, 2000);
@@ -717,6 +726,12 @@
     // 更新导航信息
     updateNavigationInfo();
     
+    // 初始化进度条为0
+    updateProgress(0);
+    
+    // 开始模拟位置更新（用于测试）
+    startLocationSimulation();
+    
     // 开始进度跟踪
     startProgressTracking();
     
@@ -724,6 +739,29 @@
     guideInterval = setInterval(() => {
       updateNavigationInfo();
     }, 3000);
+  }
+
+  // 开始模拟位置更新
+  function startLocationSimulation() {
+    // 模拟用户从起点向终点移动
+    let simulationStep = 0;
+    const totalSteps = 100;
+    
+    const simulationInterval = setInterval(() => {
+      if (simulationStep >= totalSteps) {
+        clearInterval(simulationInterval);
+        return;
+      }
+      
+      // 计算当前位置（在起点和终点之间）
+      const lat = origin.lat + (dest.lat - origin.lat) * (simulationStep / totalSteps);
+      const lng = origin.lng + (dest.lng - origin.lng) * (simulationStep / totalSteps);
+      
+      currentLocation = { lat: lat, lng: lng };
+      simulationStep++;
+      
+      console.log('模拟位置更新:', currentLocation);
+    }, 1000); // 每秒更新一次位置
   }
   
   // 退出导航模式
@@ -765,11 +803,11 @@
       map: navMap,
       icon: {
         path: google.maps.SymbolPath.CIRCLE,
-        scale: 12,
+        scale: 8,
         fillColor: '#007AFF',
         fillOpacity: 1,
         strokeColor: '#fff',
-        strokeWeight: 3
+        strokeWeight: 2
       },
       title: '現在地'
     });
@@ -781,11 +819,11 @@
         map: navMap,
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
-          scale: 12,
+          scale: 8,
           fillColor: '#FF3B30',
           fillOpacity: 1,
           strokeColor: '#fff',
-          strokeWeight: 3
+          strokeWeight: 2
         },
         title: '目的地'
       });
