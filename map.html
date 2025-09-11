@@ -7,7 +7,7 @@
   <style>
     html,body,#map{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
     .panel{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px;z-index:10}
-    .card{background:rgba(255,255,255,0.95);padding:12px 16px;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.15);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.2)}
+    .card{background:rgba(255,255,255,0.95);padding:12px 16px;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.15);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.2);overflow:hidden}
     .grow{flex:1}
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .pill{padding:8px 12px;border-radius:20px;border:1px solid #ddd;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.2s ease;background:#fff}
@@ -175,6 +175,7 @@
       transition: top 0.5s ease;
       top: 0%;
       z-index: 10;
+      margin-top: -8px; /* 确保圆点中心在进度条上 */
     }
     
     /* 底部信息面板 */
@@ -476,6 +477,9 @@
       },
       title: '現在地'
     });
+    
+    // 添加方向扇形到主地图
+    addDirectionSector(origin, map);
 
     // 自动补全
     const input = document.getElementById('search');
@@ -702,6 +706,28 @@
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return R * c;
   }
+
+  // 添加方向扇形
+  function addDirectionSector(position, map) {
+    // 创建方向扇形（模拟用户面向北方）
+    const sector = new google.maps.Polygon({
+      paths: [
+        position,
+        // 扇形顶点1（北偏西30度）
+        google.maps.geometry.spherical.computeOffset(position, 50, -30),
+        // 扇形顶点2（北偏东30度）
+        google.maps.geometry.spherical.computeOffset(position, 50, 30)
+      ],
+      fillColor: '#007AFF',
+      fillOpacity: 0.3,
+      strokeColor: '#007AFF',
+      strokeOpacity: 0.6,
+      strokeWeight: 1,
+      map: map
+    });
+    
+    return sector;
+  }
   
   // 更新进度条
   function updateProgress(percentage) {
@@ -710,7 +736,10 @@
     
     // 更新纵向进度条
     progressBarFill.style.height = percentage + '%';
-    progressIndicator.style.top = (100 - percentage) + '%';
+    
+    // 确保圆点不超出进度条范围
+    const indicatorTop = Math.max(0, Math.min(100 - percentage, 100));
+    progressIndicator.style.top = indicatorTop + '%';
   }
   
   // 停止进度跟踪
@@ -837,7 +866,7 @@
       ]
     });
     
-    // 添加起点标记
+    // 添加起点标记（带方向扇形）
     currentLocationMarker = new google.maps.Marker({
       position: origin,
       map: navMap,
@@ -851,6 +880,9 @@
       },
       title: '現在地'
     });
+    
+    // 添加方向扇形
+    addDirectionSector(origin, navMap);
     
     // 添加终点标记
     if (dest) {
