@@ -658,6 +658,13 @@
     // 初始化进度为0
     updateProgress(0);
     
+    // 确保圆点初始位置在进度条底部
+    const progressIndicator = document.getElementById('progressIndicator');
+    if (progressIndicator) {
+      progressIndicator.style.top = '100%';
+      progressIndicator.style.marginTop = '-8px';
+    }
+    
     // 基于实际位置更新进度
     progressInterval = setInterval(() => {
       if (currentLocation) {
@@ -784,6 +791,13 @@
     
     // 初始化进度条为0
     updateProgress(0);
+    
+    // 确保圆点初始位置在进度条底部
+    const progressIndicator = document.getElementById('progressIndicator');
+    if (progressIndicator) {
+      progressIndicator.style.top = '100%';
+      progressIndicator.style.marginTop = '-8px';
+    }
     
     // 开始模拟位置更新（用于测试）
     startLocationSimulation();
