@@ -15,6 +15,8 @@
     .pill:hover{transform:scale(1.02)}
     #search{padding:12px 16px;border:1px solid #ddd;border-radius:22px;font-size:16px;outline:none;flex:1;min-width:200px;height:44px;box-sizing:border-box}
     #search:focus{border-color:#007AFF;box-shadow:0 0 0 3px rgba(0,122,255,0.1)}
+    #voiceBtn{padding:12px 16px;background:#007AFF;color:#fff;border:none;border-radius:22px;cursor:pointer;font-weight:600;transition:all 0.2s ease;height:44px;box-sizing:border-box;white-space:nowrap;font-size:14px}
+    #voiceBtn:hover{background:#0056CC;transform:scale(1.05)}
     #searchBtn{padding:12px 20px;background:#007AFF;color:#fff;border:none;border-radius:22px;cursor:pointer;font-weight:600;transition:all 0.2s ease;height:44px;box-sizing:border-box;white-space:nowrap}
     #searchBtn:hover{background:#0056CC;transform:scale(1.05)}
     #go{padding:12px 20px;background:#007AFF;color:#fff;border:none;border-radius:22px;cursor:pointer;font-weight:600;transition:all 0.2s ease;height:44px;box-sizing:border-box;white-space:nowrap}
@@ -250,6 +252,7 @@
         <div class="card grow">
           <div class="row">
             <input id="search" placeholder="目的地を入力" />
+            <button id="voiceBtn">🎤 语音</button>
             <button id="searchBtn">検索</button>
             <button id="go" style="display: none;">開始</button>
             <span id="dist"></span>
@@ -330,11 +333,173 @@
   let currentLocation = null;        // 当前实际位置
   let directionSector = null;        // 方向扇形
   let currentHeading = 0;            // 当前朝向角度（0-360度）
+  let recognition = null;            // 语音识别对象
+  let isListening = false;           // 是否正在监听
 
   // 从 URL 获取起点（由小程序拼接），缺省京都站
   function getQueryFloat(name, def){ 
     const v = new URLSearchParams(location.search).get(name); 
     return v ? parseFloat(v) : def; 
+  }
+  
+  // 初始化语音识别
+  function initSpeechRecognition() {
+    // 检查浏览器是否支持语音识别
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      console.error('浏览器不支持语音识别');
+      return false;
+    }
+    
+    // 创建语音识别对象
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    
+    // 配置语音识别
+    recognition.continuous = false;  // 不连续识别
+    recognition.interimResults = false;  // 不返回中间结果
+    recognition.lang = 'ja-JP';  // 设置语言为日语
+    recognition.maxAlternatives = 1;  // 只返回一个结果
+    
+    // 识别开始事件
+    recognition.onstart = function() {
+      console.log('语音识别开始');
+      isListening = true;
+      updateVoiceButton();
+      showVoiceStatus('正在监听...');
+    };
+    
+    // 识别结果事件
+    recognition.onresult = function(event) {
+      const transcript = event.results[0][0].transcript;
+      console.log('语音识别结果:', transcript);
+      
+      // 将识别结果填入搜索框
+      const searchInput = document.getElementById('search');
+      searchInput.value = transcript;
+      
+      // 显示识别结果
+      showVoiceStatus('识别结果: ' + transcript);
+      
+      // 自动执行搜索
+      searchPlaces();
+    };
+    
+    // 识别结束事件
+    recognition.onend = function() {
+      console.log('语音识别结束');
+      isListening = false;
+      updateVoiceButton();
+      hideVoiceStatus();
+    };
+    
+    // 识别错误事件
+    recognition.onerror = function(event) {
+      console.error('语音识别错误:', event.error);
+      isListening = false;
+      updateVoiceButton();
+      
+      // 显示错误信息
+      let errorMessage = '语音识别失败';
+      switch(event.error) {
+        case 'no-speech':
+          errorMessage = '没有检测到语音';
+          break;
+        case 'audio-capture':
+          errorMessage = '无法访问麦克风';
+          break;
+        case 'not-allowed':
+          errorMessage = '麦克风权限被拒绝';
+          break;
+        case 'network':
+          errorMessage = '网络错误';
+          break;
+        default:
+          errorMessage = '语音识别错误: ' + event.error;
+      }
+      showVoiceStatus(errorMessage);
+      setTimeout(hideVoiceStatus, 3000);
+    };
+    
+    return true;
+  }
+  
+  // 开始语音识别
+  function startVoiceRecognition() {
+    if (!recognition) {
+      if (!initSpeechRecognition()) {
+        alert('浏览器不支持语音识别功能');
+        return;
+      }
+    }
+    
+    if (isListening) {
+      stopVoiceRecognition();
+      return;
+    }
+    
+    try {
+      recognition.start();
+    } catch (error) {
+      console.error('启动语音识别失败:', error);
+      alert('启动语音识别失败');
+    }
+  }
+  
+  // 停止语音识别
+  function stopVoiceRecognition() {
+    if (recognition && isListening) {
+      recognition.stop();
+    }
+  }
+  
+  // 更新语音按钮状态
+  function updateVoiceButton() {
+    const voiceBtn = document.getElementById('voiceBtn');
+    if (voiceBtn) {
+      if (isListening) {
+        voiceBtn.style.background = '#FF3B30';
+        voiceBtn.innerHTML = '🎤 停止';
+      } else {
+        voiceBtn.style.background = '#007AFF';
+        voiceBtn.innerHTML = '🎤 语音';
+      }
+    }
+  }
+  
+  // 显示语音状态
+  function showVoiceStatus(message) {
+    let statusDiv = document.getElementById('voiceStatus');
+    if (!statusDiv) {
+      statusDiv = document.createElement('div');
+      statusDiv.id = 'voiceStatus';
+      statusDiv.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        z-index: 10000;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      `;
+      document.body.appendChild(statusDiv);
+    }
+    
+    statusDiv.textContent = message;
+    statusDiv.style.display = 'block';
+  }
+  
+  // 隐藏语音状态
+  function hideVoiceStatus() {
+    const statusDiv = document.getElementById('voiceStatus');
+    if (statusDiv) {
+      statusDiv.style.display = 'none';
+    }
   }
 
   // 搜索地点功能
@@ -551,6 +716,9 @@
     });
 
 
+    // 语音按钮
+    document.getElementById('voiceBtn').onclick = startVoiceRecognition;
+    
     // 搜索按钮
     document.getElementById('searchBtn').onclick = searchPlaces;
     
@@ -559,6 +727,9 @@
     
     // 退出导航
     document.getElementById('exitNav').onclick = exitNavigation;
+    
+    // 初始化语音识别
+    initSpeechRecognition();
 
     // 小程序 -> H5 的位置更新：接收 postMessage
     window.addEventListener('message', e => {
@@ -992,6 +1163,9 @@
       guideInterval = null;
     }
     stopProgressTracking();
+    
+    // 停止语音识别
+    stopVoiceRecognition();
     
     // 重置搜索界面
     document.getElementById('search').value = '';
