@@ -339,40 +339,69 @@
 
   // 搜索地点功能
   function searchPlaces() {
+    console.log('=== 开始搜索 ===');
     const query = document.getElementById('search').value.trim();
-    if (!query) return;
+    console.log('搜索查询:', query);
+    
+    if (!query) {
+      console.log('搜索查询为空');
+      return;
+    }
     
     // 确保 origin 存在
     if (!origin) {
       console.error('起点位置未设置');
+      alert('起点位置未设置');
       return;
     }
     
-    const service = new google.maps.places.PlacesService(map);
-    service.textSearch({
-      query: query,
-      location: origin,
-      radius: 50000
-    }, (results, status) => {
-      console.log('搜索状态:', status, '结果数量:', results ? results.length : 0);
-      if (status === google.maps.places.PlacesServiceStatus.OK && results.length > 0) {
-        // 显示搜索结果列表
-        showSearchResults(results);
-      } else {
-        console.error('搜索失败:', status);
-        // 显示错误信息
-        alert('搜索失败: ' + status);
-      }
-    });
+    console.log('起点位置:', origin);
+    console.log('地图对象:', map);
+    
+    // 检查 Google Maps API 是否加载
+    if (!google || !google.maps || !google.maps.places) {
+      console.error('Google Maps API 未加载');
+      alert('Google Maps API 未加载');
+      return;
+    }
+    
+    try {
+      const service = new google.maps.places.PlacesService(map);
+      console.log('PlacesService 创建成功');
+      
+      service.textSearch({
+        query: query,
+        location: origin,
+        radius: 50000
+      }, (results, status) => {
+        console.log('搜索状态:', status, '结果数量:', results ? results.length : 0);
+        console.log('搜索结果:', results);
+        
+        if (status === google.maps.places.PlacesServiceStatus.OK && results.length > 0) {
+          // 显示搜索结果列表
+          showSearchResults(results);
+        } else {
+          console.error('搜索失败:', status);
+          // 显示错误信息
+          alert('搜索失败: ' + status);
+        }
+      });
+    } catch (error) {
+      console.error('搜索过程中发生错误:', error);
+      alert('搜索过程中发生错误: ' + error.message);
+    }
   }
 
   // 显示搜索结果
   function showSearchResults(results) {
-    console.log('显示搜索结果:', results.length, '个结果');
+    console.log('=== 显示搜索结果 ===');
+    console.log('结果数量:', results.length);
+    console.log('结果详情:', results);
     
     // 创建搜索结果面板
     let resultsPanel = document.getElementById('searchResults');
     if (!resultsPanel) {
+      console.log('创建搜索结果面板');
       resultsPanel = document.createElement('div');
       resultsPanel.id = 'searchResults';
       resultsPanel.style.cssText = `
@@ -388,21 +417,31 @@
         z-index: 1000;
       `;
       document.body.appendChild(resultsPanel);
+    } else {
+      console.log('使用现有搜索结果面板');
     }
     
-    resultsPanel.innerHTML = results.map((place, index) => `
-      <div style="padding: 12px 16px; border-bottom: 1px solid #eee; cursor: pointer;" 
-           onclick="selectPlace(${index})">
-        <div style="font-weight: 600; color: #333;">${place.name}</div>
-        <div style="font-size: 12px; color: #666; margin-top: 4px;">${place.formatted_address}</div>
-      </div>
-    `).join('');
+    // 生成搜索结果HTML
+    const resultsHTML = results.map((place, index) => {
+      console.log(`结果 ${index}:`, place.name, place.formatted_address);
+      return `
+        <div style="padding: 12px 16px; border-bottom: 1px solid #eee; cursor: pointer;" 
+             onclick="selectPlace(${index})">
+          <div style="font-weight: 600; color: #333;">${place.name}</div>
+          <div style="font-size: 12px; color: #666; margin-top: 4px;">${place.formatted_address}</div>
+        </div>
+      `;
+    }).join('');
+    
+    resultsPanel.innerHTML = resultsHTML;
     
     // 显示搜索结果面板
     resultsPanel.style.display = 'block';
+    console.log('搜索结果面板已显示');
     
     // 存储搜索结果
     window.searchResults = results;
+    console.log('搜索结果已存储到 window.searchResults');
   }
 
   // 选择地点
@@ -455,11 +494,13 @@
 
 
   function init(){
+    console.log('=== 开始初始化地图 ===');
     const olng = getQueryFloat('olng', 135.759644); // 京都站
     const olat = getQueryFloat('olat', 35.003118);
     origin = {lng: olng, lat: olat};
     
     console.log('初始化起点位置:', origin);
+    console.log('Google Maps API 状态:', typeof google, typeof google.maps, typeof google.maps.places);
 
     map = new google.maps.Map(document.getElementById('map'), {
       center: origin, 
@@ -553,12 +594,17 @@
 
     // 搜索按钮
     document.getElementById('searchBtn').onclick = searchPlaces;
+    console.log('搜索按钮事件已绑定');
     
     // 开始导航（计算路线）
     document.getElementById('go').onclick = routeAndReport;
+    console.log('导航按钮事件已绑定');
     
     // 退出导航
     document.getElementById('exitNav').onclick = exitNavigation;
+    console.log('退出按钮事件已绑定');
+    
+    console.log('=== 地图初始化完成 ===');
 
     // 小程序 -> H5 的位置更新：接收 postMessage
     window.addEventListener('message', e => {
