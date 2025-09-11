@@ -346,19 +346,29 @@
   function initSpeechRecognition() {
     // 检查浏览器是否支持语音识别
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      console.error('浏览器不支持语音识别');
+      console.warn('浏览器不支持语音识别，语音功能将不可用');
       return false;
     }
     
-    // 创建语音识别对象
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognition = new SpeechRecognition();
+    try {
+      // 创建语音识别对象
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+    } catch (error) {
+      console.error('创建语音识别对象失败:', error);
+      return false;
+    }
     
-    // 配置语音识别
-    recognition.continuous = false;  // 不连续识别
-    recognition.interimResults = false;  // 不返回中间结果
-    recognition.lang = 'ja-JP';  // 设置语言为日语
-    recognition.maxAlternatives = 1;  // 只返回一个结果
+    try {
+      // 配置语音识别
+      recognition.continuous = false;  // 不连续识别
+      recognition.interimResults = false;  // 不返回中间结果
+      recognition.lang = 'ja-JP';  // 设置语言为日语
+      recognition.maxAlternatives = 1;  // 只返回一个结果
+    } catch (error) {
+      console.error('配置语音识别失败:', error);
+      return false;
+    }
     
     // 识别开始事件
     recognition.onstart = function() {
@@ -425,9 +435,13 @@
   
   // 开始语音识别
   function startVoiceRecognition() {
+    console.log('点击语音按钮');
+    
     if (!recognition) {
       if (!initSpeechRecognition()) {
-        alert('浏览器不支持语音识别功能');
+        console.warn('语音识别不可用');
+        showVoiceStatus('语音识别不可用');
+        setTimeout(hideVoiceStatus, 2000);
         return;
       }
     }
@@ -441,7 +455,8 @@
       recognition.start();
     } catch (error) {
       console.error('启动语音识别失败:', error);
-      alert('启动语音识别失败');
+      showVoiceStatus('启动语音识别失败');
+      setTimeout(hideVoiceStatus, 2000);
     }
   }
   
@@ -504,14 +519,21 @@
 
   // 搜索地点功能
   function searchPlaces() {
+    console.log('开始搜索');
     const query = document.getElementById('search').value.trim();
-    if (!query) return;
+    if (!query) {
+      console.log('搜索查询为空');
+      return;
+    }
     
     // 确保 origin 存在
     if (!origin) {
       console.error('起点位置未设置');
+      alert('起点位置未设置');
       return;
     }
+    
+    console.log('搜索查询:', query, '起点位置:', origin);
     
     const service = new google.maps.places.PlacesService(map);
     service.textSearch({
@@ -620,6 +642,8 @@
 
 
   function init(){
+    console.log('开始初始化地图');
+    
     const olng = getQueryFloat('olng', 135.759644); // 京都站
     const olat = getQueryFloat('olat', 35.003118);
     origin = {lng: olng, lat: olat};
@@ -717,10 +741,22 @@
 
 
     // 语音按钮
-    document.getElementById('voiceBtn').onclick = startVoiceRecognition;
+    const voiceBtn = document.getElementById('voiceBtn');
+    if (voiceBtn) {
+      voiceBtn.onclick = startVoiceRecognition;
+      console.log('语音按钮事件已绑定');
+    } else {
+      console.error('语音按钮未找到');
+    }
     
     // 搜索按钮
-    document.getElementById('searchBtn').onclick = searchPlaces;
+    const searchBtn = document.getElementById('searchBtn');
+    if (searchBtn) {
+      searchBtn.onclick = searchPlaces;
+      console.log('搜索按钮事件已绑定');
+    } else {
+      console.error('搜索按钮未找到');
+    }
     
     // 开始导航（计算路线）
     document.getElementById('go').onclick = routeAndReport;
@@ -729,7 +765,17 @@
     document.getElementById('exitNav').onclick = exitNavigation;
     
     // 初始化语音识别
-    initSpeechRecognition();
+    try {
+      initSpeechRecognition();
+    } catch (error) {
+      console.error('语音识别初始化失败:', error);
+    }
+    
+    // 测试所有功能
+    console.log('地图初始化完成');
+    console.log('起点位置:', origin);
+    console.log('地图对象:', map);
+    console.log('语音识别对象:', recognition);
 
     // 小程序 -> H5 的位置更新：接收 postMessage
     window.addEventListener('message', e => {
