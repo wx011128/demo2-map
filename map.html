@@ -139,6 +139,7 @@
       flex-direction: column;
       align-items: center;
       height: 100%;
+      position: relative;
     }
     
     .progress-bar-track {
@@ -173,8 +174,9 @@
       border-radius: 50%;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       transition: top 0.5s ease;
-      top: 0%;
+      top: 100%;
       z-index: 10;
+      margin-top: -8px; /* 确保圆点中心在进度条上 */
     }
     
     /* 底部信息面板 */
@@ -729,9 +731,32 @@
     // 更新纵向进度条
     progressBarFill.style.height = percentage + '%';
     
+    // 圆点应该在绿色填充的顶部
+    // 由于进度条从底部开始填充，圆点位置应该是 (100 - percentage)%
+    // 但是要确保圆点不会超出进度条范围
+    let indicatorTop = 100 - percentage;
+    
     // 确保圆点始终在进度条范围内
-    const indicatorTop = Math.max(0, Math.min(100 - percentage, 100));
+    if (indicatorTop < 0) {
+      indicatorTop = 0;
+    } else if (indicatorTop > 100) {
+      indicatorTop = 100;
+    }
+    
+    // 调整圆点位置，确保它覆盖在进度条上
     progressIndicator.style.top = indicatorTop + '%';
+    progressIndicator.style.marginTop = '-8px'; // 确保圆点中心在进度条上
+    
+    // 确保圆点不会超出进度条范围
+    if (indicatorTop <= 0) {
+      progressIndicator.style.top = '0%';
+      progressIndicator.style.marginTop = '-8px';
+    } else if (indicatorTop >= 100) {
+      progressIndicator.style.top = '100%';
+      progressIndicator.style.marginTop = '-8px';
+    }
+    
+    console.log('进度更新:', percentage + '%', '圆点位置:', indicatorTop + '%');
   }
   
   // 停止进度跟踪
