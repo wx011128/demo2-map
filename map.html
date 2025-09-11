@@ -6,8 +6,8 @@
   <title>ナビゲーション</title>
   <style>
     html,body,#map{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-    .panel{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px;z-index:10}
-    .card{background:rgba(255,255,255,0.95);padding:12px 16px;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.15);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.2)}
+    .panel{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px;z-index:10;overflow:visible}
+    .card{background:rgba(255,255,255,0.95);padding:12px 16px;border-radius:16px 16px 16px 16px;box-shadow:0 8px 32px rgba(0,0,0,0.15);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.2);overflow:hidden}
     .grow{flex:1}
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .pill{padding:8px 12px;border-radius:20px;border:1px solid #ddd;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.2s ease;background:#fff}
@@ -338,59 +338,26 @@
   // 搜索地点功能
   function searchPlaces() {
     const query = document.getElementById('search').value.trim();
-    if (!query) {
-      console.log('搜索查询为空');
-      return;
-    }
+    if (!query) return;
     
-    console.log('开始搜索:', query);
-    console.log('起点位置:', origin);
-    console.log('地图对象:', map);
-    
-    // 检查 Google Maps API 是否加载
-    if (!google || !google.maps || !google.maps.places) {
-      console.error('Google Maps API 未加载');
-      alert('Google Maps API 未加载');
-      return;
-    }
-    
-    try {
-      const service = new google.maps.places.PlacesService(map);
-      console.log('PlacesService 创建成功');
-      
-      service.textSearch({
-        query: query,
-        location: origin,
-        radius: 50000
-      }, (results, status) => {
-        console.log('搜索状态:', status, '结果数量:', results ? results.length : 0);
-        console.log('搜索结果:', results);
-        
-        if (status === google.maps.places.PlacesServiceStatus.OK && results.length > 0) {
-          // 显示搜索结果列表
-          showSearchResults(results);
-        } else {
-          console.error('搜索失败:', status);
-          // 显示错误信息
-          alert('搜索失败: ' + status);
-        }
-      });
-    } catch (error) {
-      console.error('搜索过程中发生错误:', error);
-      alert('搜索过程中发生错误: ' + error.message);
-    }
+    const service = new google.maps.places.PlacesService(map);
+    service.textSearch({
+      query: query,
+      location: origin,
+      radius: 50000
+    }, (results, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && results.length > 0) {
+        // 显示搜索结果列表
+        showSearchResults(results);
+      }
+    });
   }
 
   // 显示搜索结果
   function showSearchResults(results) {
-    console.log('=== 显示搜索结果 ===');
-    console.log('结果数量:', results.length);
-    console.log('结果详情:', results);
-    
     // 创建搜索结果面板
     let resultsPanel = document.getElementById('searchResults');
     if (!resultsPanel) {
-      console.log('创建搜索结果面板');
       resultsPanel = document.createElement('div');
       resultsPanel.id = 'searchResults';
       resultsPanel.style.cssText = `
@@ -406,31 +373,18 @@
         z-index: 1000;
       `;
       document.body.appendChild(resultsPanel);
-    } else {
-      console.log('使用现有搜索结果面板');
     }
     
-    // 生成搜索结果HTML
-    const resultsHTML = results.map((place, index) => {
-      console.log(`结果 ${index}:`, place.name, place.formatted_address);
-      return `
-        <div style="padding: 12px 16px; border-bottom: 1px solid #eee; cursor: pointer;" 
-             onclick="selectPlace(${index})">
-          <div style="font-weight: 600; color: #333;">${place.name}</div>
-          <div style="font-size: 12px; color: #666; margin-top: 4px;">${place.formatted_address}</div>
-        </div>
-      `;
-    }).join('');
-    
-    resultsPanel.innerHTML = resultsHTML;
-    
-    // 显示搜索结果面板
-    resultsPanel.style.display = 'block';
-    console.log('搜索结果面板已显示');
+    resultsPanel.innerHTML = results.map((place, index) => `
+      <div style="padding: 12px 16px; border-bottom: 1px solid #eee; cursor: pointer;" 
+           onclick="selectPlace(${index})">
+        <div style="font-weight: 600; color: #333;">${place.name}</div>
+        <div style="font-size: 12px; color: #666; margin-top: 4px;">${place.formatted_address}</div>
+      </div>
+    `).join('');
     
     // 存储搜索结果
     window.searchResults = results;
-    console.log('搜索结果已存储到 window.searchResults');
   }
 
   // 选择地点
@@ -475,13 +429,9 @@
 
 
   function init(){
-    console.log('=== 开始初始化地图 ===');
     const olng = getQueryFloat('olng', 135.759644); // 京都站
     const olat = getQueryFloat('olat', 35.003118);
     origin = {lng: olng, lat: olat};
-    
-    console.log('初始化起点位置:', origin);
-    console.log('Google Maps API 状态:', typeof google, typeof google.maps, typeof google.maps.places);
 
     map = new google.maps.Map(document.getElementById('map'), {
       center: origin, 
@@ -495,8 +445,6 @@
         }
       ]
     });
-    
-    console.log('地图初始化完成:', map);
 
     directionsService = new google.maps.DirectionsService();
     directionsRenderer = new google.maps.DirectionsRenderer({ 
@@ -574,18 +522,6 @@
 
     // 搜索按钮
     document.getElementById('searchBtn').onclick = searchPlaces;
-    console.log('搜索按钮事件已绑定');
-    
-    // 添加测试搜索功能
-    window.testSearch = function() {
-      console.log('=== 测试搜索功能 ===');
-      console.log('origin:', origin);
-      console.log('map:', map);
-      console.log('google.maps.places:', google.maps.places);
-      
-      // 测试搜索京都站
-      searchPlaces();
-    };
     
     // 开始导航（计算路线）
     document.getElementById('go').onclick = routeAndReport;
