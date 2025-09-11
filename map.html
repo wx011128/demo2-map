@@ -396,22 +396,22 @@
     // 清除之前的终点标记
     const markers = map.markers || [];
     markers.forEach(marker => {
-      if (marker.label === 'G') marker.setMap(null);
+      if (marker.title === '目的地') marker.setMap(null);
     });
     
     // 添加新的终点标记
     const destMarker = new google.maps.Marker({ 
       position: dest, 
       map, 
-      label: 'G',
       icon: {
         path: google.maps.SymbolPath.CIRCLE,
-        scale: 12,
+        scale: 8,
         fillColor: '#FF3B30',
         fillOpacity: 1,
         strokeColor: '#fff',
-        strokeWeight: 3
-      }
+        strokeWeight: 2
+      },
+      title: '目的地'
     });
     
     if (!map.markers) map.markers = [];
@@ -457,15 +457,9 @@
     });
 
     // 起点标记 - 更明显的当前位置
-    new google.maps.Marker({ 
+    const originMarker = new google.maps.Marker({ 
       position: origin, 
       map, 
-      label: {
-        text: '現在地',
-        color: '#fff',
-        fontSize: '12px',
-        fontWeight: 'bold'
-      },
       icon: {
         path: google.maps.SymbolPath.CIRCLE,
         scale: 8,
@@ -476,6 +470,10 @@
       },
       title: '現在地'
     });
+    
+    // 将标记添加到地图的标记数组中
+    if (!map.markers) map.markers = [];
+    map.markers.push(originMarker);
 
     // 自动补全
     const input = document.getElementById('search');
@@ -494,22 +492,22 @@
       // 清除之前的终点标记
       const markers = map.markers || [];
       markers.forEach(marker => {
-        if (marker.label === 'G') marker.setMap(null);
+        if (marker.title === '目的地') marker.setMap(null);
       });
       
       // 添加新的终点标记
       const destMarker = new google.maps.Marker({ 
         position: dest, 
         map, 
-        label: 'G',
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
-          scale: 12,
+          scale: 8,
           fillColor: '#FF3B30',
           fillOpacity: 1,
           strokeColor: '#fff',
-          strokeWeight: 3
-        }
+          strokeWeight: 2
+        },
+        title: '目的地'
       });
       
       if (!map.markers) map.markers = [];
@@ -539,13 +537,12 @@
         // 更新起点标记
         const markers = map.markers || [];
         markers.forEach(marker => {
-          if (marker.label === 'S') marker.setMap(null);
+          if (marker.title === '現在地') marker.setMap(null);
         });
         
-        new google.maps.Marker({ 
+        const newOriginMarker = new google.maps.Marker({ 
           position: origin, 
           map, 
-          label: 'S',
           icon: {
             path: google.maps.SymbolPath.CIRCLE,
             scale: 8,
@@ -553,8 +550,13 @@
             fillOpacity: 1,
             strokeColor: '#fff',
             strokeWeight: 2
-          }
+          },
+          title: '現在地'
         });
+        
+        // 将新标记添加到地图的标记数组中
+        if (!map.markers) map.markers = [];
+        map.markers.push(newOriginMarker);
       }
       if (type === 'setDest' && payload) {
         dest = { lng: payload.lng, lat: payload.lat };
@@ -562,13 +564,12 @@
         // 更新终点标记
         const markers = map.markers || [];
         markers.forEach(marker => {
-          if (marker.label === 'G') marker.setMap(null);
+          if (marker.title === '目的地') marker.setMap(null);
         });
         
-        new google.maps.Marker({ 
+        const newDestMarker = new google.maps.Marker({ 
           position: dest, 
           map, 
-          label: 'G',
           icon: {
             path: google.maps.SymbolPath.CIRCLE,
             scale: 8,
@@ -576,8 +577,13 @@
             fillOpacity: 1,
             strokeColor: '#fff',
             strokeWeight: 2
-          }
+          },
+          title: '目的地'
         });
+        
+        // 将新标记添加到地图的标记数组中
+        if (!map.markers) map.markers = [];
+        map.markers.push(newDestMarker);
         
         routeAndReport();
       }
@@ -673,6 +679,18 @@
           if (currentLocationMarker) {
             currentLocationMarker.setPosition(currentLocation);
           }
+          
+          // 更新主地图中的当前位置标记
+          if (map.markers) {
+            map.markers.forEach(marker => {
+              if (marker.title === '現在地') {
+                marker.setPosition(currentLocation);
+              }
+            });
+          }
+          
+          // 更新主地图中心
+          map.setCenter(currentLocation);
           
           // 更新上次已知位置
           lastKnownLocation = currentLocation;
@@ -776,6 +794,23 @@
           origin = { lat: newOlat, lng: newOlng };
           currentLocation = { lat: newOlat, lng: newOlng };
           console.log('位置更新:', currentLocation);
+          
+          // 更新导航地图中的当前位置标记
+          if (currentLocationMarker) {
+            currentLocationMarker.setPosition(currentLocation);
+          }
+          
+          // 更新主地图中的当前位置标记
+          if (map.markers) {
+            map.markers.forEach(marker => {
+              if (marker.title === '現在地') {
+                marker.setPosition(currentLocation);
+              }
+            });
+          }
+          
+          // 更新主地图中心
+          map.setCenter(currentLocation);
         }
         
         lastUrl = location.href;
@@ -812,6 +847,25 @@
       map.markers.forEach(marker => marker.setMap(null));
       map.markers = [];
     }
+    
+    // 重新添加起点标记
+    const resetOriginMarker = new google.maps.Marker({ 
+      position: origin, 
+      map, 
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 8,
+        fillColor: '#007AFF',
+        fillOpacity: 1,
+        strokeColor: '#fff',
+        strokeWeight: 2
+      },
+      title: '現在地'
+    });
+    
+    // 将标记添加到地图的标记数组中
+    if (!map.markers) map.markers = [];
+    map.markers.push(resetOriginMarker);
     
     // 重置变量
     dest = null;
@@ -855,6 +909,10 @@
       title: '現在地'
     });
     
+    // 将标记添加到地图的标记数组中
+    if (!navMap.markers) navMap.markers = [];
+    navMap.markers.push(currentLocationMarker);
+    
     // 添加终点标记
     if (dest) {
       destinationMarker = new google.maps.Marker({
@@ -870,6 +928,10 @@
         },
         title: '目的地'
       });
+      
+      // 将标记添加到地图的标记数组中
+      if (!navMap.markers) navMap.markers = [];
+      navMap.markers.push(destinationMarker);
     }
     
     // 添加路线到导航地图
