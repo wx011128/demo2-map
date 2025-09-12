@@ -367,71 +367,38 @@
     
     console.log('尝试播报:', text, '语音开关:', voiceEnabled);
     
-    // 停止之前的播报
-    if (speechSynthesis) {
-      speechSynthesis.cancel();
-    }
-    
-    // 检查浏览器是否支持语音合成
-    if ('speechSynthesis' in window) {
-      // 等待语音列表加载完成（微信环境需要）
-      const speak = () => {
-        const utterance = new SpeechSynthesisUtterance(text);
-        
-        // 设置语音参数
-        utterance.lang = 'ja-JP'; // 日语
-        utterance.rate = 0.7;     // 语速稍慢，适合导航
-        utterance.pitch = 1.0;    // 音调
-        utterance.volume = 1.0;   // 音量最大
-        
-        // 尝试选择日语语音
-        const voices = speechSynthesis.getVoices();
-        const japaneseVoice = voices.find(voice => 
-          voice.lang.startsWith('ja') || 
-          voice.name.includes('Japanese') ||
-          voice.name.includes('日本語')
-        );
-        
-        if (japaneseVoice) {
-          utterance.voice = japaneseVoice;
-          console.log('使用日语语音:', japaneseVoice.name);
-        } else {
-          console.log('未找到日语语音，使用默认语音');
-        }
-        
-        // 添加事件监听
-        utterance.onstart = function() {
-          console.log('语音开始播报:', text);
-        };
-        
-        utterance.onend = function() {
-          console.log('语音播报结束');
-        };
-        
-        utterance.onerror = function(event) {
-          console.error('语音播报错误:', event.error);
-          // 如果语音失败，尝试通过小程序API播报
-          sendToMiniProgram('speak', { text: text });
-        };
-        
-        // 播报
-        speechSynthesis = window.speechSynthesis;
-        speechSynthesis.speak(utterance);
-        
-        lastSpokenText = text;
-        console.log('语音播报已启动:', text);
-      };
-      
-      // 如果语音列表还没加载，等待加载完成
-      if (speechSynthesis.getVoices().length === 0) {
-        speechSynthesis.onvoiceschanged = speak;
-      } else {
-        speak();
-      }
-    } else {
-      console.log('浏览器不支持语音合成，尝试通过小程序API');
+    // 优先使用微信小程序语音功能
+    if (window.wx && window.wx.miniProgram) {
       // 通过postMessage发送给小程序
       sendToMiniProgram('speak', { text: text });
+      lastSpokenText = text;
+      console.log('已发送语音请求给小程序:', text);
+      return;
+    }
+    
+    // 备用方案：尝试Web Speech API
+    if ('speechSynthesis' in window) {
+      // 停止之前的播报
+      if (speechSynthesis) {
+        speechSynthesis.cancel();
+      }
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // 设置语音参数
+      utterance.lang = 'ja-JP'; // 日语
+      utterance.rate = 0.8;     // 语速
+      utterance.pitch = 1.0;    // 音调
+      utterance.volume = 0.8;   // 音量
+      
+      // 播报
+      speechSynthesis = window.speechSynthesis;
+      speechSynthesis.speak(utterance);
+      
+      lastSpokenText = text;
+      console.log('使用Web Speech API播报:', text);
+    } else {
+      console.log('浏览器不支持语音合成，且未检测到微信小程序环境');
     }
   }
 
@@ -439,6 +406,11 @@
   function stopSpeaking() {
     if (speechSynthesis) {
       speechSynthesis.cancel();
+    }
+    
+    // 也通知小程序停止语音
+    if (window.wx && window.wx.miniProgram) {
+      sendToMiniProgram('stopSpeak', {});
     }
   }
 
@@ -480,9 +452,6 @@
   function searchPlaces() {
     const query = document.getElementById('search').value.trim();
     if (!query) return;
-    
-    // 测试语音功能（用户交互触发）
-    speakText('検索中です');
     
     const service = new google.maps.places.PlacesService(map);
     service.textSearch({
@@ -576,14 +545,6 @@
     const olng = getQueryFloat('olng', 135.759644); // 京都站
     const olat = getQueryFloat('olat', 35.003118);
     origin = {lng: olng, lat: olat};
-    
-    // 测试语音功能（延迟更久，等待微信环境完全加载）
-    setTimeout(() => {
-      console.log('测试语音功能...');
-      console.log('当前环境:', navigator.userAgent);
-      console.log('是否支持语音合成:', 'speechSynthesis' in window);
-      speakText('音声テストです。');
-    }, 5000);
 
     map = new google.maps.Map(document.getElementById('map'), {
       center: origin, 
@@ -684,27 +645,16 @@
     // 语音控制按钮
     document.getElementById('voiceBtn').onclick = toggleVoice;
     
-    // 添加测试语音功能（长按语音按钮）
-    let voiceTestTimeout = null;
-    document.getElementById('voiceBtn').addEventListener('mousedown', function() {
-      voiceTestTimeout = setTimeout(() => {
-        speakText('音声テストです。ナビゲーションの音声が正常に動作しています。');
-      }, 1000);
-    });
+    // 检测微信小程序环境
+    console.log('当前环境:', navigator.userAgent);
+    console.log('是否支持语音合成:', 'speechSynthesis' in window);
+    console.log('是否在微信小程序中:', !!(window.wx && window.wx.miniProgram));
     
-    document.getElementById('voiceBtn').addEventListener('mouseup', function() {
-      if (voiceTestTimeout) {
-        clearTimeout(voiceTestTimeout);
-        voiceTestTimeout = null;
-      }
-    });
-    
-    document.getElementById('voiceBtn').addEventListener('mouseleave', function() {
-      if (voiceTestTimeout) {
-        clearTimeout(voiceTestTimeout);
-        voiceTestTimeout = null;
-      }
-    });
+    // 测试语音功能（延迟执行，等待微信环境完全加载）
+    setTimeout(() => {
+      console.log('测试语音功能...');
+      speakText('音声テストです。');
+    }, 3000);
 
     // 小程序 -> H5 的位置更新：接收 postMessage
     window.addEventListener('message', e => {
@@ -988,12 +938,6 @@
     setTimeout(() => {
       startProgressTracking();
     }, 1000);
-    
-    // 测试语音功能
-    setTimeout(() => {
-      console.log('测试语音功能...');
-      speakText('音声テストです。');
-    }, 3000);
     
     // 定期更新导航信息
     guideInterval = setInterval(() => {
