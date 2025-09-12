@@ -238,6 +238,29 @@
       background: #D70015;
       transform: scale(1.05);
     }
+    
+    /* 语音控制按钮 */
+    .voice-btn {
+      background: #34C759;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-left: 8px;
+    }
+    
+    .voice-btn:hover {
+      background: #30B04F;
+      transform: scale(1.05);
+    }
+    
+    .voice-btn.muted {
+      background: #8E8E93;
+    }
   </style>
   <!-- 加载 Google Maps JS + Places 库 -->
   <script async
@@ -306,6 +329,7 @@
           <div class="info-value" id="arrivalTime">11:02</div>
         </div>
         <div class="info-item">
+          <button class="voice-btn" id="voiceBtn">🔊</button>
           <button class="exit-btn" id="exitNav">終了</button>
         </div>
       </div>
@@ -327,11 +351,68 @@
   let currentLocationMarker = null;  // 当前位置标记
   let destinationMarker = null;      // 目的地标记
   let currentLocation = null;        // 当前实际位置
+  let speechSynthesis = null;        // 语音合成对象
+  let lastSpokenText = '';           // 上次播报的文本
+  let voiceEnabled = true;           // 语音播报开关
 
   // 从 URL 获取起点（由小程序拼接），缺省京都站
   function getQueryFloat(name, def){ 
     const v = new URLSearchParams(location.search).get(name); 
     return v ? parseFloat(v) : def; 
+  }
+
+  // 语音播报功能
+  function speakText(text) {
+    if (!text || text === lastSpokenText || !voiceEnabled) return;
+    
+    // 停止之前的播报
+    if (speechSynthesis) {
+      speechSynthesis.cancel();
+    }
+    
+    // 检查浏览器是否支持语音合成
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // 设置语音参数
+      utterance.lang = 'ja-JP'; // 日语
+      utterance.rate = 0.8;     // 语速
+      utterance.pitch = 1.0;    // 音调
+      utterance.volume = 0.8;   // 音量
+      
+      // 播报
+      speechSynthesis = window.speechSynthesis;
+      speechSynthesis.speak(utterance);
+      
+      lastSpokenText = text;
+      console.log('语音播报:', text);
+    } else {
+      console.log('浏览器不支持语音合成');
+    }
+  }
+
+  // 停止语音播报
+  function stopSpeaking() {
+    if (speechSynthesis) {
+      speechSynthesis.cancel();
+    }
+  }
+
+  // 切换语音播报开关
+  function toggleVoice() {
+    voiceEnabled = !voiceEnabled;
+    const voiceBtn = document.getElementById('voiceBtn');
+    
+    if (voiceEnabled) {
+      voiceBtn.textContent = '🔊';
+      voiceBtn.classList.remove('muted');
+      console.log('语音播报已开启');
+    } else {
+      voiceBtn.textContent = '🔇';
+      voiceBtn.classList.add('muted');
+      stopSpeaking();
+      console.log('语音播报已关闭');
+    }
   }
 
   // 搜索地点功能
@@ -527,6 +608,9 @@
     
     // 退出导航
     document.getElementById('exitNav').onclick = exitNavigation;
+    
+    // 语音控制按钮
+    document.getElementById('voiceBtn').onclick = toggleVoice;
 
     // 小程序 -> H5 的位置更新：接收 postMessage
     window.addEventListener('message', e => {
@@ -798,6 +882,11 @@
       progressIndicator.style.marginTop = '-8px';
     }
     
+    // 语音播报开始导航
+    setTimeout(() => {
+      speakText('ナビゲーションを開始します。');
+    }, 1000);
+    
     // 开始模拟位置更新（用于测试）
     startLocationSimulation();
     
@@ -861,6 +950,9 @@
     // 显示主界面，隐藏导航界面
     document.getElementById('map').style.display = 'block';
     document.getElementById('navigationScreen').style.display = 'none';
+    
+    // 停止语音播报
+    stopSpeaking();
     
     // 停止所有定时器
     if (guideInterval) {
@@ -1024,6 +1116,9 @@
     if (distanceToDestination < 50) {
       document.getElementById('currentStreet').textContent = '目的地到着';
       document.getElementById('nextAction').textContent = 'お疲れ様でした';
+      
+      // 语音播报到达目的地
+      speakText('目的地に到着しました。お疲れ様でした。');
       return;
     }
     
@@ -1087,6 +1182,10 @@
     // 更新显示
     document.getElementById('currentStreet').textContent = streetName;
     document.getElementById('nextAction').textContent = action + (distanceText ? ' (' + distanceText + ')' : '');
+    
+    // 语音播报指令
+    const instructionText = action + (distanceText ? ' ' + distanceText : '');
+    speakText(instructionText);
     
     // 实时更新底部信息
     updateBottomInfo();
